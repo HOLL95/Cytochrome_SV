@@ -43,8 +43,8 @@ param_list={
         'CdlE1': 0,
         'CdlE2': 0,
         "CdlE3":0,
-        'gamma': 1e-10,   # surface coverage per unit area
-        "original_gamma":1e-10,        # Nondimensionalising cvalue for surface coverage
+        'gamma': 1e-12,   # surface coverage per unit area
+        "original_gamma":1e-12,        # Nondimensionalising cvalue for surface coverage
         'k_0': 100, #(reaction rate s-1)
         'alpha': 0.5, #(Symmetry factor)
         'phase' : 3*(math.pi/2),#Phase of the input potential
@@ -58,7 +58,7 @@ simulation_options={
         "experimental_fitting":True,
         "method": "sinusoidal",
         "likelihood":"timeseries",
-        "phase_only":True,
+        "phase_only":False,
         "label": "cmaes",
         "GH_quadrature": True,
         "optim_list":[],
@@ -75,11 +75,11 @@ param_bounds={
     'E_0':[param_list["E_start"], param_list["E_reverse"]],#[param_list['E_start'],param_list['E_reverse']],
     'omega':[0.95*param_list['omega'],1.05*param_list['omega']],#8.88480830076,  #    (frequency Hz)
     'Ru': [0, 1e3],  #     (uncompensated resistance ohms)
-    'Cdl': [0,1e-4], #(capacitance parameters)
-    'CdlE1': [-0.05,0.15],#0.000653657774506,
+    'Cdl': [0,1e-3], #(capacitance parameters)
+    'CdlE1': [-0.15,0.15],#0.000653657774506,
     'CdlE2': [-0.01,0.01],#0.000245772700637,
     'CdlE3': [-0.01,0.01],#1.10053945995e-06,
-    'gamma': [1e-11,1e-9],
+    'gamma': [1e-13,1e-11],
     'k_0': [50, 1e3], #(reaction rate s-1)
     'alpha': [0.4, 0.6],
     "cap_phase":[math.pi/2, 2*math.pi],
@@ -96,7 +96,7 @@ cyt=single_electron(file_name=None, dim_parameter_dictionary=param_list, simulat
 nd_current=cyt.other_values["experiment_current"]
 nd_voltage=cyt.other_values["experiment_voltage"]
 nd_time=cyt.other_values["experiment_time"]
-cyt.def_optim_list(["E_0", "k_0", "Cdl","Ru", "omega", "gamma", "alpha"])
+cyt.def_optim_list(["E_0", "k_0", "Cdl","CdlE1", "CdlE2","Ru", "omega", "gamma", "alpha", "phase", "cap_phase"])
 true_data=nd_current
 fourier_arg=cyt.top_hat_filter(nd_current)
 if simulation_options["likelihood"]=="timeseries":
@@ -124,10 +124,10 @@ for i in range(0, num_runs):
     cmaes_results=cyt.change_norm_group(found_parameters[:-1], "un_norm")
     print(list(cmaes_results))
     cmaes_time=cyt.test_vals(cmaes_results, likelihood="timeseries", test=False)
-    plr.subplot(1,2,1)
+    plt.subplot(1,2,1)
     plt.plot(nd_voltage, cmaes_time)
     plt.plot(nd_voltage, nd_current, alpha=0.7)
-    plt.sublot(1,2,2)
+    plt.subplot(1,2,2)
     plt.plot(nd_time, cmaes_time)
     plt.plot(nd_time, nd_current, alpha=0.7)
     plt.show()

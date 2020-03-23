@@ -402,6 +402,7 @@ class single_electron:
                 if self.simulation_options["experimental_fitting"]==True:
                     plt.subplot(1,2,1)
                     plt.plot(self.other_values["experiment_voltage"],time_series)
+                    plt.plot(self.other_values["experiment_voltage"],self.secret_data_time_series, alpha=0.7)
                     plt.subplot(1,2,2)
                     plt.plot(self.other_values["experiment_time"],time_series)
                     plt.plot(self.other_values["experiment_time"],self.secret_data_time_series, alpha=0.7)
