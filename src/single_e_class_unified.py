@@ -5,7 +5,8 @@ import math
 import numpy as np
 import itertools
 import multiprocessing as mp
-import matplotlib.pyplot as plt
+try:
+    import matplotlib.pyplot as plt
 from params_class import params
 from dispersion_class import dispersion
 from decimal import Decimal
@@ -106,7 +107,6 @@ class single_electron:
         try:
             disp_idx=self.simulation_options["dispersion_distributions"].index("normal")
         except:
-            print(dispersion_distributions)
             raise KeyError("GH quadrature is only appropriate for a normal distribution")
         nodes=self.simulation_options["dispersion_bins"][disp_idx]
         labels=["nodes", "weights", "normal_weights"]
@@ -313,11 +313,10 @@ class single_electron:
         return results
     def paralell_disperse(self, solver):
         time_series=np.zeros(len(self.time_vec))
-        if "GH_quadrature" in self.simulation_options:
-            if self.simulation_options["GH_quadrature"]==True:
-                sim_params, values, weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict), self.other_values["GH_dict"])
+        if "GH_quadrature" in self.simulation_options and self.simulation_options["GH_quadrature"]==True:
+            sim_params, values, weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict), self.other_values["GH_dict"])
         else:
-                sim_params, values, weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict))
+            sim_params, values, weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict))
 
         for i in range(0, len(weights)):
             for j in range(0, len(sim_params)):
