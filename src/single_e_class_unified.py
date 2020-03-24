@@ -7,6 +7,8 @@ import itertools
 import multiprocessing as mp
 try:
     import matplotlib.pyplot as plt
+except:
+    pass
 from params_class import params
 from dispersion_class import dispersion
 from decimal import Decimal

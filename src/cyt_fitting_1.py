@@ -112,7 +112,7 @@ print(len(nd_current))
 plt.plot(cyt.e_nondim(nd_voltage), nd_current)
 plt.show()
 #cyt.def_optim_list(["E0_mean", "E0_std","k_0","Cdl","CdlE1", "CdlE2","CdlE3","Ru", "omega", "gamma", "alpha", "phase", "cap_phase"])
-cyt.def_optim_list(["E0_mean", "E0_std","k_0","Cdl","CdlE1", "CdlE2","CdlE3","Ru", "omega", "gamma", "alpha", "phase", "cap_phase"])
+cyt.def_optim_list(["E_0","k_0","Cdl","CdlE1", "CdlE2","CdlE3","Ru", "omega", "gamma", "alpha", "phase", "cap_phase"])
 true_data=nd_current
 fourier_arg=cyt.top_hat_filter(nd_current)
 if simulation_options["likelihood"]=="timeseries":
