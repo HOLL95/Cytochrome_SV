@@ -18,7 +18,7 @@ data_loc=("/").join(dir_list[:-1])+"/Experiment_data/SV"
 files=os.listdir(data_loc)
 scan="1"
 freq="_9_"
-dec_amount=16
+dec_amount=8
 for file in files:
     if scan in file and freq in file:
 
@@ -38,14 +38,12 @@ except:
 
 param_list={
         "E_0":0.2, #Midpoint potnetial (V)
-        "E0_mean": 0.2,
-        "E0_std":0.01,
         'E_start': min(voltage_results[len(voltage_results)//4:3*len(voltage_results)//4]), #Sinusoidal input minimum (or starting) potential (V)
         'E_reverse': max(voltage_results[len(voltage_results)//4:3*len(voltage_results)//4]), #Sinusoidal input maximum potential (V)
         'omega':8.94,   #frequency Hz
         "original_omega":8.94, #Nondimensionalising value for frequency (Hz)
         'd_E': 300e-3,   #ac voltage amplitude - V
-        'area': 0.07, #electrode surface area cm^2
+        'area': 0.125, #electrode surface area cm^2
         'Ru': 100.0,  #     uncompensated resistance ohms
         'Cdl': 1e-5, #capacitance parameters
         'CdlE1': 0,
@@ -53,8 +51,6 @@ param_list={
         "CdlE3":0,
         'gamma': 1e-11,   # surface coverage per unit area
         "original_gamma":1e-11,        # Nondimensionalising cvalue for surface coverage
-        "k0_shape":0,
-        "k0_scale":0,
         'k_0': 100, #(reaction rate s-1)
         'alpha': 0.5, #(Symmetry factor)
         'phase' : 3*(math.pi/2),#Phase of the input potential
@@ -68,20 +64,18 @@ simulation_options={
         "experimental_fitting":True,
         "method": "sinusoidal",
         "likelihood":"fourier",
-        "phase_only":False,
-        "dispersion_bins":[16],
-        "dispersion_distributions":["lognormal"],
+        "phase_only":True,
         "label": "cmaes",
-        "GH_quadrature": False,
+        "GH_quadrature": True,
         "optim_list":[],
     }
 other_values={
         "filter_val": 0.5,
-        "harmonic_range":list(range(4,10,1)),
+        "harmonic_range":list(range(4,9,1)),
         "experiment_current":current_results,
         "experiment_time":time_results,
         "experiment_voltage":voltage_results,
-        "num_peaks":20,
+        "num_peaks":30,
     }
 param_bounds={
     'E_0':[param_list["E_start"], param_list["E_reverse"]],#[param_list['E_start'],param_list['E_reverse']],
@@ -108,8 +102,11 @@ cyt=single_electron(file_name=None, dim_parameter_dictionary=param_list, simulat
 nd_current=cyt.other_values["experiment_current"]
 nd_voltage=cyt.other_values["experiment_voltage"]
 nd_time=cyt.other_values["experiment_time"]
-print(len(nd_current))
-plt.plot(cyt.e_nondim(nd_voltage), nd_current)
+harms=harmonics(cyt.simulation_options["harmonic_range"], cyt.dim_dict["omega"]*cyt.nd_param.c_T0, 0.05)
+data_harmonics=harms.generate_harmonics(nd_time, nd_current)
+for i in range(0, len(data_harmonics)):
+    plt.subplot(len(data_harmonics), 1, i+1)
+    plt.plot(nd_voltage, data_harmonics[i,:])
 plt.show()
 #cyt.def_optim_list(["E0_mean", "E0_std","k_0","Cdl","CdlE1", "CdlE2","CdlE3","Ru", "omega", "gamma", "alpha", "phase", "cap_phase"])
 cyt.def_optim_list(["E_0","k_0","Cdl","CdlE1", "CdlE2","CdlE3","Ru", "omega", "gamma", "alpha", "phase", "cap_phase"])
@@ -120,10 +117,11 @@ if simulation_options["likelihood"]=="timeseries":
 elif simulation_options["likelihood"]=="fourier":
     dummy_times=np.linspace(0, 1, len(fourier_arg))
     cmaes_problem=pints.SingleOutputProblem(cyt, dummy_times, fourier_arg)
+
 score = pints.GaussianLogLikelihood(cmaes_problem)#[4.56725844e-01, 4.44532637e-05, 2.98665132e-01, 2.96752050e-01, 3.03459391e-01]#
 CMAES_boundaries=pints.RectangularBoundaries(list([np.zeros(len(cyt.optim_list)+1)]), list([np.ones(len(cyt.optim_list)+1)]))
 cyt.simulation_options["test"]=False
-num_runs=20
+num_runs=5
 param_mat=np.zeros((num_runs,len(cyt.optim_list)))
 score_vec=np.ones(num_runs)*1e6
 voltages=cyt.define_voltages(transient=True)
@@ -133,7 +131,6 @@ for i in range(0, num_runs):
     cmaes_fitting=pints.OptimisationController(score, x0, sigma0=None, boundaries=CMAES_boundaries, method=pints.CMAES)
     cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-7)
     paralell=not cyt.simulation_options["test"]
-    print(paralell)
     cmaes_fitting.set_parallel(paralell)
     found_parameters, found_value=cmaes_fitting.run()
     print(found_parameters)
@@ -159,3 +156,5 @@ for i in range(0, num_runs):
                 plt.plot(nd_time, sim_harmonics[i,:])
                 plt.plot(nd_time, data_harmonics[i,:], alpha=0.7)
             plt.show()
+    param_mat[i,:]=cmaes_results
+    score_vec[i]=found_value
