@@ -5,10 +5,7 @@ import math
 import numpy as np
 import itertools
 import multiprocessing as mp
-try:
-    import matplotlib.pyplot as plt
-except:
-    pass
+import matplotlib.pyplot as plt
 from params_class import params
 from dispersion_class import dispersion
 from decimal import Decimal
@@ -17,7 +14,7 @@ import time
 import pickle
 import warnings
 class single_electron:
-    def __init__(self,file_name=None, dim_parameter_dictionary={}, simulation_options={}, other_values={}, param_bounds={}, results_flag=True):
+    def __init__(self,file_name="", dim_parameter_dictionary={}, simulation_options={}, other_values={}, param_bounds={}, results_flag=True):
         if type(file_name) is dict:
             raise TypeError("Need to define a filename - this is currently a dictionary!")
 
@@ -32,24 +29,31 @@ class single_electron:
             self.save_dict=save_dict
         else:
             self.file_init=False
-
+        required_params=set(["E_0", "k_0", "alpha", "gamma", "Ru", "Cdl", "CdlE1","CdlE2","CdlE3", "E_start", \
+                            "E_reverse", "omega", "phase", "d_E"])
+        param_set=set(dim_parameter_dictionary.keys())
+        req_union=required_params.intersection(param_set)
+        if len(req_union)!=len(required_params):
+            missing_params=required_params-req_union
+            raise KeyError("Essential parameter(s) mising:",missing_params)
+        key_list=list(dim_parameter_dictionary.keys())
+        if "phase only" in simulation_options and "cap_phase" not in key_list:
+            raise KeyError("Specify either phase only or a capacitance phase")
         if simulation_options["method"]=="ramped":
             dim_parameter_dictionary["v_nondim"]=True
         self.nd_param=params(dim_parameter_dictionary)
         self.nd_param_dict=self.nd_param.nd_param_dict
         self.dim_dict=copy.deepcopy(dim_parameter_dictionary)
         self.simulation_options=simulation_options
-        self.other_values=other_values
-        self.check_inputs()
         self.optim_list=self.simulation_options["optim_list"]
-        self.simulation_options["harmonic_range"]=self.other_values["harmonic_range"]
-        self.num_harmonics=len(self.simulation_options["harmonic_range"])
-        self.filter_val=self.other_values["filter_val"]
-        self.bounds_val=self.other_values["bounds_val"]
+        self.harmonic_range=other_values["harmonic_range"]
+        self.num_harmonics=len(self.harmonic_range)
+        self.filter_val=other_values["filter_val"]
+        self.bounds_val=other_values["bounds_val"]
         self.time_array=[]
         if self.simulation_options["experimental_fitting"]==True:
             if simulation_options["method"]=="sinusoidal":
-                time_end=(self.other_values["num_peaks"]/self.nd_param.nd_param_dict["omega"])
+                time_end=(self.nd_param.nd_param_dict["num_peaks"]/self.nd_param.nd_param_dict["omega"])
             elif simulation_options["method"]=="ramped":
                 time_end=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])
             elif simulation_options["method"]=="dcv":
@@ -57,33 +61,33 @@ class single_electron:
             if simulation_options["no_transient"]!=False:
                 if simulation_options["no_transient"]>time_end:
                     warnings.warn("Previous transient removal method detected")
-                    time_idx=tuple(np.where(self.other_values["experiment_time"]<time_end))
+                    time_idx=tuple(np.where(other_values["experiment_time"]<time_end))
                     desired_idx=tuple((range(simulation_options["no_transient"],time_idx[0][-1])))
                     self.time_idx=desired_idx[0]
                 else:
-                    desired_idx=tuple(np.where((self.other_values["experiment_time"]<time_end) & (self.other_values["experiment_time"]>simulation_options["no_transient"])))
-                    time_idx=tuple(np.where(self.other_values["experiment_time"]<time_end))
+                    desired_idx=tuple(np.where((other_values["experiment_time"]<time_end) & (other_values["experiment_time"]>simulation_options["no_transient"])))
+                    time_idx=tuple(np.where(other_values["experiment_time"]<time_end))
                     self.time_idx=desired_idx[0][0]
             else:
-                desired_idx=tuple(np.where(self.other_values["experiment_time"]<time_end))
+                desired_idx=tuple(np.where(other_values["experiment_time"]<time_end))
                 time_idx=desired_idx
                 self.time_idx=0
             if self.file_init==False or results_flag==True:
-                self.time_vec=self.other_values["experiment_time"][time_idx]/self.nd_param.c_T0
-                self.other_values["experiment_time"]=self.other_values["experiment_time"][desired_idx]/self.nd_param.c_T0
-                self.other_values["experiment_current"]=self.other_values["experiment_current"][desired_idx]/self.nd_param.c_I0
-                self.other_values["experiment_voltage"]=self.other_values["experiment_voltage"][desired_idx]/self.nd_param.c_E0
+                self.time_vec=other_values["experiment_time"][time_idx]/self.nd_param.c_T0
+                other_values["experiment_time"]=other_values["experiment_time"][desired_idx]/self.nd_param.c_T0
+                other_values["experiment_current"]=other_values["experiment_current"][desired_idx]/self.nd_param.c_I0
+                other_values["experiment_voltage"]=other_values["experiment_voltage"][desired_idx]/self.nd_param.c_E0
             else:
                 if simulation_options["method"]=="sinusoidal":
-                    self.other_values["time_end"]=(self.other_values["num_peaks"])#/self.nd_param.nd_param_dict["omega"])
+                    self.nd_param.nd_param_dict["time_end"]=(self.nd_param.nd_param_dict["num_peaks"])#/self.nd_param.nd_param_dict["omega"])
                 else:
-                    self.other_values["time_end"]=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])
+                    self.nd_param.nd_param_dict["time_end"]=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])
                 self.times()
         else:
             if simulation_options["method"]=="sinusoidal":
-                self.other_values["time_end"]=(self.other_values["num_peaks"])#/self.nd_param.nd_param_dict["omega"])
+                self.nd_param.nd_param_dict["time_end"]=(self.nd_param.nd_param_dict["num_peaks"])#/self.nd_param.nd_param_dict["omega"])
             else:
-                self.other_values["time_end"]=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])
+                self.nd_param.nd_param_dict["time_end"]=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])
             self.times()
             if simulation_options["no_transient"]!=False:
                     transient_time=self.t_nondim(self.time_vec)
@@ -94,34 +98,32 @@ class single_electron:
         self.def_optim_list(self.simulation_options["optim_list"])
         frequencies=np.fft.fftfreq(len(self.time_vec), self.time_vec[1]-self.time_vec[0])
         self.frequencies=frequencies[np.where(frequencies>0)]
-        last_point= (self.simulation_options["harmonic_range"][-1]*self.nd_param.nd_param_dict["omega"])+(self.nd_param.nd_param_dict["omega"]*self.filter_val)
+        last_point= (self.harmonic_range[-1]*self.nd_param.nd_param_dict["omega"])+(self.nd_param.nd_param_dict["omega"]*self.filter_val)
         self.test_frequencies=frequencies[np.where(self.frequencies<last_point)]
+        self.other_values=other_values
+        self.boundaries=None
         self.param_bounds=param_bounds
         if self.simulation_options["experimental_fitting"]==True:
-            self.secret_data_fourier=self.top_hat_filter(self.other_values["experiment_current"])
-            self.secret_data_time_series=self.other_values["experiment_current"]
+            self.secret_data_fourier=self.top_hat_filter(other_values["experiment_current"])
+            self.secret_data_time_series=other_values["experiment_current"]
     def GH_setup(self):
         """
         We assume here that for n>1 normally dispersed parameters then the order of the integral
-        will be the same for both. The function defines the nodes, weights and weights required for the calculation of a normal expectation
-        using Gaussian-hermite quadrature.
+        will be the same for both
         """
         try:
             disp_idx=self.simulation_options["dispersion_distributions"].index("normal")
         except:
-            raise KeyError("GH quadrature is only appropriate for a normal distribution")
+            print(dispersion_distributions)
+            raise KeyError("No normal distributions for GH quadrature")
         nodes=self.simulation_options["dispersion_bins"][disp_idx]
         labels=["nodes", "weights", "normal_weights"]
         nodes, weights=np.polynomial.hermite.hermgauss(nodes)
         normal_weights=np.multiply(1/math.sqrt(math.pi), weights)
         self.other_values["GH_dict"]=dict(zip(labels, [nodes, weights, normal_weights]))
+    def define_boundaries(self, param_bounds):
+        self.param_bounds=param_bounds
     def def_optim_list(self, optim_list):
-        """
-        Accepts a list of parameters to simulate.
-        Checks if the parameters are already defined for the model
-        Defines the boundaries variable for normalisation using the param_bounds using the param bounds dictionary
-        Checks if any of the parameters are dispersed parameters
-        """
         keys=list(self.dim_dict.keys())
         for i in range(0, len(optim_list)):
             if optim_list[i] in keys:
@@ -155,9 +157,11 @@ class single_electron:
                         self.simulation_options["dispersion_distributions"].append(distribution_flags[j])
             if type(self.simulation_options["dispersion_bins"])is int:
                 if len(self.simulation_options["dispersion_distributions"])>1:
+                    num_dists=len(self.simulation_options["dispersion_distributions"])
                     warnings.warn("Only one set of bins defined for multiple distributions. Assuming all distributions discretised using the same number of bins")
-                num_dists=len(self.simulation_options["dispersion_distributions"])
-                self.simulation_options["dispersion_bins"]=[self.simulation_options["dispersion_bins"]]*num_dists
+                    self.simulation_options["dispersion_bins"]=[self.simulation_options["dispersion_bins"]]*num_dists
+                else:
+                    raise ValueError("Fewer specified bins than distributions")
             if "GH_quadrature" in self.simulation_options:
                 if self.simulation_options["GH_quadrature"]==True:
                     self.GH_setup()
@@ -168,15 +172,16 @@ class single_electron:
             self.simulation_options["phase_only"]=True
         else:
             self.simulation_options["phase_only"]=False
+        if "alpha_mean" in optim_list or "alpha_std" in optim_list:
+            self.simulation_options["alpha_dispersion"]="normal"
+        else:
+            if "alpha_dispersion" in self.simulation_options:
+                del self.simulation_options["alpha_dispersion"]
+    def add_noise(self, series, sd):
+        return np.add(series, np.random.normal(0, sd, len(series)))
     def normalise(self, norm, boundaries):
-        """
-        Normalises the value (norm) provided to a value between 0 and 1 by its position relative to the value of the boundaries
-        """
         return  (norm-boundaries[0])/(boundaries[1]-boundaries[0])
     def un_normalise(self, norm, boundaries):
-        """
-        Norm is a value between 0 and 1, which the function normalises to the appropriate value between the provided boundaries
-        """
         return (norm*(boundaries[1]-boundaries[0]))+boundaries[0]
     def i_nondim(self, current):
         return np.multiply(current, self.nd_param.c_I0)
@@ -188,11 +193,7 @@ class single_electron:
         return 1
     def n_parameters(self):
         return len(self.optim_list)
-    def define_voltages(self, transient=True):
-        """
-        Returns the potential input as defined by the experimental paramters in the parameter dictionary.
-        If transient is equal to False then the voltage is also truncated appropriately
-        """
+    def define_voltages(self, transient=False):
         voltages=np.zeros(len(self.time_vec))
         if self.simulation_options["method"]=="sinusoidal":
             for i in range(0, len(self.time_vec)):
@@ -203,7 +204,7 @@ class single_electron:
         elif self.simulation_options["method"]=="dcv":
             for i in range(0, len(self.time_vec)):
                 voltages[i]=isolver_martin_brent.dcv_et(self.nd_param.nd_param_dict["E_start"], self.nd_param.nd_param_dict["E_reverse"], (self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]) , 1,(self.time_vec[i]))
-        if transient==False:
+        if transient==True:
             voltages=voltages[self.time_idx:]
         return voltages
     def top_hat_filter(self, time_series):
@@ -220,11 +221,11 @@ class single_electron:
         if "fourier_scaling" in self.simulation_options:
             if self.simulation_options["fourier_scaling"]!=None:
                 scale_flag=True
-        if sum(np.diff(self.simulation_options["harmonic_range"]))!=len(self.simulation_options["harmonic_range"])-1 or scale_flag==True or self.other_values["filter_val"]!=0.5:
+        if sum(np.diff(self.harmonic_range))!=len(self.harmonic_range)-1 or scale_flag==True:
             results=np.zeros(len(top_hat), dtype=complex)
             for i in range(0, self.num_harmonics):
-                true_harm_n=true_harm*self.simulation_options["harmonic_range"][i]
-                index=tuple(np.where((frequencies<(true_harm_n+(true_harm*self.filter_val))) & (frequencies>true_harm_n-(true_harm*self.filter_val))))
+                true_harm_n=true_harm*self.harmonic_range[i]
+                index=tuple(np.where((frequencies<(true_harm_n+(self.nd_param.nd_param_dict["omega"]*self.filter_val))) & (frequencies>true_harm_n-(self.nd_param.nd_param_dict["omega"]*self.filter_val))))
                 if scale_flag==True:
                     filter_bit=abs(top_hat[index])
                     min_f=min(filter_bit)
@@ -234,13 +235,14 @@ class single_electron:
                     filter_bit=top_hat[index]
                 results[index]=filter_bit
         else:
-            first_harm=(self.simulation_options["harmonic_range"][0]*true_harm)-(true_harm*self.filter_val)
-            last_harm=(self.simulation_options["harmonic_range"][-1]*true_harm)+(true_harm*self.filter_val)
+            first_harm=(self.harmonic_range[0]*true_harm)-(self.nd_param.nd_param_dict["omega"]*self.filter_val)
+            last_harm=(self.harmonic_range[-1]*true_harm)+(self.nd_param.nd_param_dict["omega"]*self.filter_val)
             likelihood=top_hat[np.where((frequencies>first_harm) & (frequencies<last_harm))]
+            #self.test_frequencies=frequencies[np.where((frequencies>first_harm) & (frequencies<last_harm))]
             results=np.zeros(len(top_hat), dtype=complex)
             results[np.where((frequencies>first_harm) & (frequencies<last_harm))]=likelihood
-        #comp_results=np.append((np.real(results)), np.imag(results))
-        return np.real(results)
+        comp_results=np.append((np.real(results)), np.imag(results))
+        return comp_results
     def abs_transform(self, data):
         window=np.hanning(len(data))
         hanning_transform=np.multiply(window, data)
@@ -283,7 +285,7 @@ class single_electron:
             theta[i]=u1n1_top/denom
         return theta
     def times(self):
-        self.time_vec=np.arange(0, self.other_values["time_end"], self.nd_param.nd_param_dict["sampling_freq"])
+        self.time_vec=np.arange(0, self.nd_param.nd_param_dict["time_end"], self.nd_param.nd_param_dict["sampling_freq"])
         #self.time_vec=np.linspace(0, self.nd_param.nd_param_dict["time_end"], num_points)
     def change_norm_group(self, param_list, method):
         normed_params=copy.deepcopy(param_list)
@@ -315,10 +317,11 @@ class single_electron:
         return results
     def paralell_disperse(self, solver):
         time_series=np.zeros(len(self.time_vec))
-        if "GH_quadrature" in self.simulation_options and self.simulation_options["GH_quadrature"]==True:
-            sim_params, values, weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict), self.other_values["GH_dict"])
+        if "GH_quadrature" in self.simulation_options:
+            if self.simulation_options["GH_quadrature"]==True:
+                sim_params, values, weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict), self.other_values["GH_dict"])
         else:
-            sim_params, values, weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict))
+                sim_params, values, weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict))
 
         for i in range(0, len(weights)):
             for j in range(0, len(sim_params)):
@@ -351,7 +354,7 @@ class single_electron:
         else:
             plt.plot(current, residual, label=round(self.debug_time, 4))
             plt.show()
-    def simulate(self,parameters, frequencies=None):
+    def simulate(self,parameters, frequencies):
         if len(parameters)!= len(self.optim_list):
             print(self.optim_list)
             print(parameters)
@@ -403,7 +406,6 @@ class single_electron:
                 if self.simulation_options["experimental_fitting"]==True:
                     plt.subplot(1,2,1)
                     plt.plot(self.other_values["experiment_voltage"],time_series)
-                    plt.plot(self.other_values["experiment_voltage"],self.secret_data_time_series, alpha=0.7)
                     plt.subplot(1,2,2)
                     plt.plot(self.other_values["experiment_time"],time_series)
                     plt.plot(self.other_values["experiment_time"],self.secret_data_time_series, alpha=0.7)
@@ -413,68 +415,6 @@ class single_electron:
                     plt.plot(self.time_vec[self.time_idx:], self.secret_data_time_series)
                     plt.show()
             return (time_series)
-    def check_inputs(self):
-        required_params=set(["E_0", "k_0", "alpha", "gamma", "Ru", "Cdl", "CdlE1","CdlE2","CdlE3", "E_start", \
-                        "original_gamma", "area","E_reverse", "omega", "phase", "d_E", "sampling_freq"])
-        user_params=set(self.dim_dict.keys())
-        req_union=required_params.intersection(user_params)
-        if len(req_union)!=len(required_params):
-            missing_params=required_params-req_union
-            raise KeyError("Essential parameter(s) mising:",missing_params)
-        if "experimental_fitting" not in self.simulation_options:
-            raise KeyError("Please specify whether to fit to experimental data or not")
-        if "no_transient" not in self.simulation_options:
-            self.simulation_options["no_transient"]=False
-        elif self.simulation_options["no_transient"]!=False:
-            try:
-                int(self.simulation_options["no_transient"])
-            except:
-                raise ValueError("Please specify the time before which you want to remove the signal")
-        if "numerical_debugging" not in self.simulation_options:
-            self.simulation_options["numerical_debugging"]=False
-        if "dispersion" not in self.simulation_options:
-            self.simulation_options["dispersion"]=False
-        if "test" not in self.simulation_options:
-            self.simulation_options["test"]=False
-        if "method" not in self.simulation_options:
-            raise KeyError("Please specify method (sinusoidal or ramped)")
-        if "likelihood" not in  self.simulation_options:
-            raise KeyError("Please specify either frequency or time-domain likelihood (options-fourier or timeseries)")
-        if "numerical_method" not in self.simulation_options:
-            self.simulation_options["numerical_method"]="Brent minimisation"
-        if "label" not in self.simulation_options:
-            self.simulation_options["label"]="MCMC"
-        if "optim_list" not in self.simulation_options:
-            raise KeyError("Please specify parameters with which to simulate")
-        if self.simulation_options["likelihood"]=="fourier":
-            if "filter_val" not in self.other_values:
-                warnings.warn("Assuming width of filter is 0.5*omega")
-                self.other_values["filter_val"]=0.5
-            if "harmonic_range" not in self.other_values:
-                raise KeyError("Please specify which harmonics to use for the fitting process")
-        if self.simulation_options["experimental_fitting"]==True:
-            if "experiment_time" not in self.other_values:
-                raise KeyError("Please an experimental time")
-            if "experiment_voltage" not in self.other_values:
-                raise KeyError("Please an experimental voltage")
-            if "experiment_current" not in self.other_values:
-                raise KeyError("Please an experimental current")
-        if self.simulation_options["method"]=="sinusoidal":
-            if "num_peaks" not in self.other_values:
-                if "num_peaks" in self.dim_dict:
-                    self.other_values["num_peaks"]=self.dim_dict["num_peaks"]
-                else:
-                    raise KeyError("Specify the number of peaks desired for the experiment")
-        if "bounds_val" not in self.other_values:
-            #Brent minimisation algorithm maximum change in one time interval dt
-            self.other_values["bounds_val"]=20
-        if self.simulation_options["method"]=="ramped":
-            if "original_omega" in self.dim_dict:
-                raise KeyError("Need to delete original_omega from the list of parameters for the ramped method")
-            if "v" not in self.dim_dict:
-                raise KeyError("The ramped method needs a linear potential scan rate v for non-dimensionalisation")
-        if "phase only" in self.simulation_options and "cap_phase" not in user_params:
-            raise KeyError("Specify either phase only or a capacitance phase")
 class paralell_class:
     def __init__(self, params, times, method, bounds, solver):
         self.params=params

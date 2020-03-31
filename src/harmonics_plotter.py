@@ -21,12 +21,15 @@ class harmonics:
         frequencies=f[np.where((f>0) & (f<(last_harm+(0.5*self.input_frequency))))]
         top_hat=(copy.deepcopy(Y[0:len(frequencies)]))
         harmonics=np.zeros((self.num_harmonics, len(time_series)), dtype="complex")
+        #plt.plot(frequencies, top_hat)
         for i in range(0, self.num_harmonics):
             true_harm=self.harmonics[i]*self.input_frequency
+            #plt.axvline(true_harm, color="black")
             freq_idx=np.where((frequencies<(true_harm+(self.input_frequency*self.filter_val))) & (frequencies>true_harm-(self.input_frequency*self.filter_val)))
             filter_bit=(top_hat[freq_idx])
             harmonics[i,np.where((frequencies<(true_harm+(self.input_frequency*self.filter_val))) & (frequencies>true_harm-(self.input_frequency*self.filter_val)))]=filter_bit
             harmonics[i,:]=((np.fft.ifft(harmonics[i,:])))
+        #plt.show()
         return harmonics
     def empty(self, arg):
         return arg

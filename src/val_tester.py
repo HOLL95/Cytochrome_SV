@@ -18,7 +18,7 @@ data_loc=("/").join(dir_list[:-1])+"/Experiment_data/SV"
 files=os.listdir(data_loc)
 scan="1"
 freq="_9_"
-dec_amount=16
+dec_amount=32
 for file in files:
     if scan in file and freq in file:
 
@@ -45,7 +45,7 @@ param_list={
         'omega':8.94,   #frequency Hz
         "original_omega":8.94, #Nondimensionalising value for frequency (Hz)
         'd_E': 300e-3,   #ac voltage amplitude - V
-        'area': 0.07, #electrode surface area cm^2
+        'area': 0.125, #electrode surface area cm^2
         'Ru': 100.0,  #     uncompensated resistance ohms
         'Cdl': 1e-5, #capacitance parameters
         'CdlE1': 0,
@@ -75,13 +75,14 @@ simulation_options={
         "GH_quadrature": False,
         "optim_list":[],
     }
+
 other_values={
         "filter_val": 0.5,
-        "harmonic_range":list(range(4,10,1)),
+        "harmonic_range":list(range(0,100,1)),
         "experiment_current":current_results,
         "experiment_time":time_results,
         "experiment_voltage":voltage_results,
-        "num_peaks":20,
+        "num_peaks": 50,
     }
 param_bounds={
     'E_0':[param_list["E_start"], param_list["E_reverse"]],#[param_list['E_start'],param_list['E_reverse']],
@@ -108,42 +109,15 @@ cyt=single_electron(file_name=None, dim_parameter_dictionary=param_list, simulat
 nd_current=cyt.other_values["experiment_current"]
 nd_voltage=cyt.other_values["experiment_voltage"]
 nd_time=cyt.other_values["experiment_time"]
+vals=[-0.22330786248492673, 762.0653703865524, 0.0005222279163638236, -0.12501328619522822, 0.00040593818965144017, -0.0007776013177241518, 517.6737816215855, 8.94086695405389, 9.609826904007704e-11, 0.40000750225452375, 6.280473529834756, 4.7706880658504]
+cyt.def_optim_list(["E_0","k_0","Cdl","CdlE1", "CdlE2","CdlE3","Ru", "omega", "gamma", "alpha", "phase", "cap_phase"])
+cmaes_time=cyt.test_vals(vals, "fourier", test=True)
 harms=harmonics(cyt.simulation_options["harmonic_range"], cyt.dim_dict["omega"]*cyt.nd_param.c_T0, 0.05)
 data_harmonics=harms.generate_harmonics(nd_time, nd_current)
+cmaes_harmonics=harms.generate_harmonics(nd_time, cmaes_time)
 for i in range(0, len(data_harmonics)):
     plt.subplot(len(data_harmonics), 1, i+1)
-    plt.plot(nd_voltage, data_harmonics[i,:])
+    plt.plot(nd_time,abs(data_harmonics[i,:]))
+    plt.plot(nd_time, abs(cmaes_harmonics[i,:]))
 plt.show()
-plots="fourier"
-cyt.def_optim_list(["E_0", "k_0", "Cdl","CdlE1", "CdlE2","CdlE3","Ru", "omega", "gamma", "alpha", "phase", "cap_phase"])
-inf_params=[-0.26742665869741566, 50.00000000019233, 5.8652622271648164e-05, 0.009842939588946886, 0.0005954905413801843, 7.701265437505891e-06, 8.206747435756358e-08, 8.940664700078155, 1.7888689475894705e-11, 0.5999999999956317, 4.9913707115353425, 4.313702716197615]
-inf_params_abs_fourier=[0.23203819989502655, 113.61318675353178, 0.00033665335590685874, -0.046617605673274984, -0.0012233226052263957, -0.0039373338896817826, 547.0164875315204, 8.941340842776235, 4.461696674088344e-11, 0.4000000011094948, 5.661175597154945, 1.8227255650448815]
-inf_params_real_fourier=[0.010371794868859863, 0.7884306376225872, 0.0004858260741909631, -0.01607176909161101, -0.009858004231351813, -0.003997582231756558, 427.5422029353303, 8.93812581548564, 6.057934985536461e-11, 0.5633922027962549, 2.848857972309427, 5.914666146907428]
-inf_params_real_4_9=[0.004246414426657297, 222.15842581845718, 0.00034622727986807365, 0.05706405306789489, 0.009932158556052817, 0.0006991843978110864, 383.80108765562017, 8.940090752161254, 5.3891932358446315e-11, 0.4906835504630738, 1.6944550110849772, 0.002061114786534785]
-inf_params_real_4_10=[-0.030475811789263785, 38.55022465755111, 0.0002691859443380048, 0.0704733052072592, 0.009999926825132751, -0.009984786488729934, 865.5493476284323, 8.94018995145225, 5.734235422126767e-11, 0.4000000107761078, 1.3834607073832788, 4.470012024698083]
-inf_params_real_4_10=[-0.0720588953506438, 28.768337502923615, 0.00035314588527364055, -0.11615588233295393, -0.0059141046634961095, -0.004857233358735673, 982.0201585811727, 8.940079221729626, 8.09266030189611e-11, 0.5954989868164128, 0.017300505531537013, 1.1724011100110385]
-cmaes=cyt.test_vals(inf_params_real_4_10, "fourier", test=True)
-cmaes_time=cyt.test_vals(inf_params_real_4_10, "timeseries", test=False)
-freqs=np.fft.fftfreq(len(nd_time), nd_time[1]-nd_time[0])
-if plots=="fourier":
-    harms=harmonics(cyt.simulation_options["harmonic_range"], 8.94*cyt.nd_param.c_T0, 0.05)
-    data_harmonics=harms.generate_harmonics(nd_time, nd_current)
-    sim_harmonics=harms.generate_harmonics(nd_time, cmaes_time)
-    for i in range(0, len(data_harmonics)):
-        plt.subplot(len(data_harmonics), 1, i+1)
-    #   plt.plot(nd_voltage, sim_harmonics[i,:])
-        plt.plot(nd_voltage, data_harmonics[i,:], alpha=0.7)
-    plt.show()
-if plots=="timeseries":
-    plt.subplot(1,2,1)
-    plt.plot(nd_voltage, cmaes)
-    plt.plot(nd_voltage, nd_current, alpha=0.7)
-    plt.xlabel("ND voltage")
-    plt.ylabel("ND current")
-    plt.subplot(1,2,2)
-    where_idx=tuple(np.where((nd_time>2) & (nd_time<4)))
-    plt.plot(nd_time[where_idx], cmaes[where_idx])
-    plt.plot(nd_time[where_idx], nd_current[where_idx], alpha=0.7)
-    plt.xlabel("ND time")
-    plt.ylabel("ND current")
-    plt.show()
+#cyt.def_optim_list(["E0_mean", "E0_std","k_0","Cdl","CdlE1", "CdlE2","CdlE3","Ru", "omega", "gamma", "alpha", "phase", "cap_phase"])
