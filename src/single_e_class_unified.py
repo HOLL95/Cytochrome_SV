@@ -190,6 +190,11 @@ class single_electron:
     def t_nondim(self, time):
         return np.multiply(time, self.nd_param.c_T0)
     def n_outputs(self):
+        if "multi_output" in self.simulation_options:
+            if self.simulation_options["multi_output"]==True:
+                return 2
+            else:
+                return 1
         return 1
     def n_parameters(self):
         return len(self.optim_list)
@@ -208,14 +213,15 @@ class single_electron:
             voltages=voltages[self.time_idx:]
         return voltages
     def top_hat_filter(self, time_series):
-        frequencies=self.frequencies
+
         L=len(time_series)
         window=np.hanning(L)
-        time_series=np.multiply(time_series, window)
+        #time_series=np.multiply(time_series, window)
         f=np.fft.fftfreq(len(time_series), self.time_vec[1]-self.time_vec[0])
         Y=np.fft.fft(time_series)
+        frequencies=f
         #Y_pow=np.power(copy.deepcopy(Y[0:len(frequencies)]),2)
-        top_hat=copy.deepcopy(Y[0:len(frequencies)])
+        top_hat=copy.deepcopy(Y)
         scale_flag=False
         true_harm=self.nd_param.nd_param_dict["omega"]*self.nd_param.c_T0
         if "fourier_scaling" in self.simulation_options:
@@ -225,7 +231,7 @@ class single_electron:
             results=np.zeros(len(top_hat), dtype=complex)
             for i in range(0, self.num_harmonics):
                 true_harm_n=true_harm*self.harmonic_range[i]
-                index=tuple(np.where((frequencies<(true_harm_n+(self.nd_param.nd_param_dict["omega"]*self.filter_val))) & (frequencies>true_harm_n-(self.nd_param.nd_param_dict["omega"]*self.filter_val))))
+                index=tuple(np.where((frequencies<(true_harm_n+(true_harm*self.filter_val))) & (frequencies>true_harm_n-(true_harm*self.filter_val))))
                 if scale_flag==True:
                     filter_bit=abs(top_hat[index])
                     min_f=min(filter_bit)
@@ -235,14 +241,18 @@ class single_electron:
                     filter_bit=top_hat[index]
                 results[index]=filter_bit
         else:
-            first_harm=(self.harmonic_range[0]*true_harm)-(self.nd_param.nd_param_dict["omega"]*self.filter_val)
-            last_harm=(self.harmonic_range[-1]*true_harm)+(self.nd_param.nd_param_dict["omega"]*self.filter_val)
-            likelihood=top_hat[np.where((frequencies>first_harm) & (frequencies<last_harm))]
+            first_harm=(self.harmonic_range[0]*true_harm)-(true_harm*self.filter_val)
+            last_harm=(self.harmonic_range[-1]*true_harm)+(true_harm*self.filter_val)
+            freq_idx_1=tuple(np.where((frequencies>first_harm) & (frequencies<last_harm)))
+            freq_idx_2=tuple(np.where((frequencies<-first_harm) & (frequencies>-last_harm)))
+            likelihood_1=top_hat[freq_idx_1]
+            likelihood_2=top_hat[freq_idx_2]
             #self.test_frequencies=frequencies[np.where((frequencies>first_harm) & (frequencies<last_harm))]
             results=np.zeros(len(top_hat), dtype=complex)
-            results[np.where((frequencies>first_harm) & (frequencies<last_harm))]=likelihood
+            results[freq_idx_1]=likelihood_1
+            results[freq_idx_2]=likelihood_2
         comp_results=np.append((np.real(results)), np.imag(results))
-        return comp_results
+        return results
     def abs_transform(self, data):
         window=np.hanning(len(data))
         hanning_transform=np.multiply(window, data)
@@ -309,8 +319,12 @@ class single_electron:
         self.simulation_options["label"]="MCMC"
         self.simulation_options["test"]=test
         results=self.simulate(parameters, self.frequencies)
-        if sum(results)==0:
-            raise ValueError("Not simulated, check options")
+        if self.n_outputs()==1:
+            if sum(results)==0:
+                raise ValueError("Not simulated, check options")
+        elif self.n_outputs()==1:
+            if sum(results[:,0])==0 or sum(results[:,1])==0:
+                raise ValueError("Not simulated, check options")
         self.simulation_options["likelihood"]=orig_likelihood
         self.simulation_options["label"]=orig_label
         self.simulation_options["test"]=orig_test
@@ -397,7 +411,11 @@ class single_electron:
                 plt.plot(filtered , alpha=0.7, label="numerical")
                 plt.legend()
                 plt.show()
-
+            if "multi_output" in self.simulation_options:
+                if self.simulation_options["multi_output"]==True:
+                    return np.column_stack((np.real(filtered), np.imag(filtered)))
+                else:
+                    return filtered
             return filtered
         elif self.simulation_options["likelihood"]=='timeseries':
             if self.simulation_options["test"]==True:

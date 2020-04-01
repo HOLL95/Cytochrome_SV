@@ -73,6 +73,7 @@ simulation_options={
     "phase_only":False,
     "likelihood":likelihood_options[1],
     "numerical_method": solver_list[1],
+    "multi_output": True,
     "label": "MCMC",
     "optim_list":[]
 }
@@ -152,6 +153,7 @@ plt.show()
 fourier_arg=cyt.top_hat_filter(true_data)
 cyt.secret_data_fourier=fourier_arg
 test_fourier=cyt.test_vals(vals, "fourier", test=False)
+test_fourier=test_fourier[:, 0]
 cyt.def_optim_list(["E_0","k_0","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","cap_phase","phase", "alpha"])
 harms=harmonics(cyt.other_values["harmonic_range"], cyt.dim_dict["omega"]*cyt.nd_param.c_T0, 0.5)
 data_harmonics=harms.generate_harmonics(time_results,(current_results))
@@ -170,7 +172,7 @@ if simulation_options["likelihood"]=="timeseries":
     cmaes_problem=pints.SingleOutputProblem(cyt, time_results, true_data)
 elif simulation_options["likelihood"]=="fourier":
     dummy_times=np.linspace(0, 1, len(fourier_arg))
-    cmaes_problem=pints.SingleOutputProblem(cyt, dummy_times, fourier_arg)
+    cmaes_problem=pints.MultiOutputProblem(cyt, dummy_times, np.column_stack((np.real(fourier_arg), np.imag(fourier_arg))))
 score = pints.SumOfSquaresError(cmaes_problem)#[4.56725844e-01, 4.44532637e-05, 2.98665132e-01, 2.96752050e-01, 3.03459391e-01]#
 CMAES_boundaries=pints.RectangularBoundaries(list([np.zeros(len(cyt.optim_list))]), list([np.ones(len(cyt.optim_list))]))
 cyt.simulation_options["label"]="cmaes"

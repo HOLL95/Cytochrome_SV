@@ -27,7 +27,7 @@ class harmonics:
             #plt.axvline(true_harm, color="black")
             freq_idx=np.where((frequencies<(true_harm+(self.input_frequency*self.filter_val))) & (frequencies>true_harm-(self.input_frequency*self.filter_val)))
             filter_bit=(top_hat[freq_idx])
-            harmonics[i,np.where((frequencies<(true_harm+(self.input_frequency*self.filter_val))) & (frequencies>true_harm-(self.input_frequency*self.filter_val)))]=filter_bit
+            harmonics[i,np.where((frequencies<(true_harm+(self.input_frequency*self.filter_val))) & (frequencies>true_harm-(self.input_frequency*self.filter_val)))]=np.imag(filter_bit)
             harmonics[i,:]=((np.fft.ifft(harmonics[i,:])))
         #plt.show()
         return harmonics

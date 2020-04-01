@@ -77,7 +77,7 @@ simulation_options={
     }
 other_values={
         "filter_val": 0.5,
-        "harmonic_range":list(range(3,9,1)),
+        "harmonic_range":list(range(4,9,1)),
         "experiment_current":current_results,
         "experiment_time":time_results,
         "experiment_voltage":voltage_results,
