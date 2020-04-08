@@ -60,6 +60,7 @@ param_list={
     "alpha_std":1e-3,
     'sampling_freq' : (1.0/400),
     'phase' : 3*(math.pi/2),
+    "num_peaks":30,
 }
 solver_list=["Brent minimisation"]
 likelihood_options=["timeseries", "fourier"]
@@ -73,7 +74,7 @@ simulation_options={
     "test": False,
     "method": "sinusoidal",
     "phase_only":False,
-    "likelihood":"fourier",
+    "likelihood":"timeseries",
     "numerical_method": "Brent minimisation",
     "label": "MCMC",
     "optim_list":[],
@@ -121,9 +122,8 @@ cyt.dim_dict["phase"]=3*math.pi/2
 #cyt.def_optim_list(["E_0","k0_shape", "k0_scale","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","cap_phase","phase", "alpha"])
 cyt.simulation_options["dispersion_bins"]=[7,7]
 cyt.simulation_options["GH_quadrature"]=True
-vals=[-0.2, 100, 100,1e-4, 0, 0, 8.94086695405389, 5.609826904007704e-11, 3*math.pi/2, 3*math.pi/2, 0.40000750225452375]
+vals=[-0.2, 100, 100,1e-5, 0, 0, 8.94086695405389, 5.609826904007704e-11, 3*math.pi/2, 3*math.pi/2, 0.40000750225452375]
 cyt.def_optim_list(["E_0","k_0","Ru","Cdl","CdlE1", "CdlE2","omega","gamma","cap_phase","phase", "alpha"])
-test_data=cyt.test_vals(vals, "timeseries")
 test_data=cyt.test_vals(vals, "timeseries")
 plt.plot(nd_voltage, test_data)
 plt.show()
@@ -132,7 +132,7 @@ filtered=cyt.top_hat_filter(nd_current)
 #plt.plot(nd_voltage, nd_current, alpha=0.7)
 #plt.legend()
 #plt.show()
-harms=harmonics(cyt.simulation_options["harmonic_range"], cyt.dim_dict["omega"]*cyt.nd_param.c_T0, 0.05)
+harms=harmonics(cyt.other_values["harmonic_range"], cyt.dim_dict["omega"]*cyt.nd_param.c_T0, 0.05)
 data_harmonics=harms.generate_harmonics(nd_time, nd_current)
 #for i in range(0, len(data_harmonics)):
 #    plt.subplot(len(data_harmonics), 1, i+1)
@@ -153,7 +153,7 @@ elif simulation_options["likelihood"]=="fourier":
     cmaes_problem=pints.SingleOutputProblem(cyt, dummy_times, fourier_arg)
 score = pints.SumOfSquaresError(cmaes_problem)#[4.56725844e-01, 4.44532637e-05, 2.98665132e-01, 2.96752050e-01, 3.03459391e-01]#
 CMAES_boundaries=pints.RectangularBoundaries(list([np.zeros(len(cyt.optim_list))]), list([np.ones(len(cyt.optim_list))]))
-cyt.simulation_options["test"]=False
+cyt.simulation_options["test"]=True
 num_runs=20
 param_mat=np.zeros((num_runs,len(cyt.optim_list)))
 score_vec=np.ones(num_runs)*1e6
@@ -162,7 +162,7 @@ for i in range(0, num_runs):
     x0=abs(np.random.rand(cyt.n_parameters()))
     print(len(x0), cmaes_problem.n_parameters(), CMAES_boundaries.n_parameters(), score.n_parameters())
     cmaes_fitting=pints.OptimisationController(score, x0, sigma0=None, boundaries=CMAES_boundaries, method=pints.CMAES)
-    cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-7)
+    cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-3)
     paralell=False#not cyt.simulation_options["test"]
     print(paralell)
     cmaes_fitting.set_parallel(paralell)
@@ -171,24 +171,21 @@ for i in range(0, num_runs):
     cmaes_results=cyt.change_norm_group(found_parameters[:], "un_norm")
     print(list(cmaes_results))
     cmaes_time=cyt.test_vals(cmaes_results, likelihood="timeseries", test=False)
-    """
-    if plot==True:
-        if cyt.simulation_options["likelihood"]=="timeseries":
-            plt.subplot(1,2,1)
-            plt.plot(nd_voltage, cmaes_time)
-            plt.plot(nd_voltage, true_data, alpha=0.7)
-            plt.subplot(1,2,2)
-            plt.plot(nd_time, cmaes_time)
-            plt.plot(nd_time, true_data, alpha=0.7)
-            plt.show()
-        elif cyt.simulation_options["likelihood"]=="fourier":
-            cyt.test_vals(cmaes_results, likelihood="fourier", test=True)
-            harms=harmonics(cyt.simulation_options["harmonic_range"], cyt.dim_dict["omega"]*cyt.nd_param.c_T0, 0.05)
-            data_harmonics=harms.generate_harmonics(nd_time, true_data)
-            sim_harmonics=harms.generate_harmonics(nd_time, cmaes_time)
-            for i in range(0, len(data_harmonics)):
-                plt.subplot(len(data_harmonics), 1, i+1)
-                plt.plot(nd_time, sim_harmonics[i,:])
-                plt.plot(nd_time, data_harmonics[i,:], alpha=0.7)
-            plt.show()
-        """
+    if cyt.simulation_options["likelihood"]=="timeseries":
+        plt.subplot(1,2,1)
+        plt.plot(nd_voltage, cmaes_time)
+        plt.plot(nd_voltage, true_data, alpha=0.7)
+        plt.subplot(1,2,2)
+        plt.plot(nd_time, cmaes_time)
+        plt.plot(nd_time, true_data, alpha=0.7)
+        plt.show()
+    elif cyt.simulation_options["likelihood"]=="fourier":
+        cyt.test_vals(cmaes_results, likelihood="fourier", test=True)
+        harms=harmonics(cyt.other_values["harmonic_range"], cyt.dim_dict["omega"]*cyt.nd_param.c_T0, 0.05)
+        data_harmonics=harms.generate_harmonics(nd_time, true_data)
+        sim_harmonics=harms.generate_harmonics(nd_time, cmaes_time)
+        for i in range(0, len(data_harmonics)):
+            plt.subplot(len(data_harmonics), 1, i+1)
+            plt.plot(nd_time, sim_harmonics[i,:])
+            plt.plot(nd_time, data_harmonics[i,:], alpha=0.7)
+        plt.show()

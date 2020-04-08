@@ -116,21 +116,7 @@ time_results=cyt.other_values["experiment_time"]
 current_results=cyt.other_values["experiment_current"]
 voltage_results=cyt.other_values["experiment_voltage"]
 harms=harmonics(cyt.other_values["harmonic_range"], cyt.dim_dict["omega"]*cyt.nd_param.c_T0, 0.5)
-plt.subplot(1,2,1)
-plt.plot(cyt.e_nondim(time_results), cyt.i_nondim(current_results))
-plt.xlabel("Time(s)")
-plt.ylabel("Current(A)")
-plt.subplot(1,2,2)
-plt.plot(cyt.e_nondim(voltage_results), cyt.i_nondim(current_results))
-plt.xlabel("Voltage(V)")
-plt.ylabel("Current(A)")
-plt.show()
-f=np.fft.fftfreq(len(time_results), cyt.t_nondim(time_results[1])-cyt.t_nondim(time_results[0]))
-y=np.fft.fft(cyt.i_nondim(current_results))
-plt.semilogy(f,abs(np.power(y, 2)))
-plt.xlabel("Frequency(Hz)")
-plt.ylabel("Power")
-plt.show()
+
 
 cyt.dim_dict["noise"]=0
 cyt.dim_dict["phase"]=3*math.pi/2
@@ -138,7 +124,7 @@ print(len(current_results))
 #cyt.def_optim_list(["E_0","k0_shape", "k0_scale","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","cap_phase","phase", "alpha"])
 cyt.simulation_options["dispersion_bins"]=[5]
 cyt.simulation_options["GH_quadrature"]=True
-cyt.def_optim_list(["E_0","k_0","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","cap_phase","phase", "alpha"])
+cyt.def_optim_list(["E_0","k_0","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","phase", "alpha"])
 reduced_list=["E_0","k_0","Ru","gamma","omega","cap_phase","phase", "alpha"]
 reduced_vals=[-0.15336602503285124, 34.94661847742798, 862.8515851277263, 8.172998783135129e-11, 8.941111613936217, 2.185756798482757, 3.658426955099939, 0.5999999999999948]
 real_reduced_vals=[-0.2298233557733859, 54.02734878486922, 56.98720340934313, 1.0568500401803649e-11, 8.939393208568873, 5.756812883487079, 4.944735887956814, 0.40000000000000213]
@@ -155,12 +141,13 @@ imag_e0=[0.25154525912497694, 0.04776397494695416, 28.045021208386437, 310.28619
 real_e0=[0.27962188042218383, 0.025673544382111127, 182.00012539796222, 999.995507576053, 0.00034998499951815093, -0.03609368808580215, -0.0037276229790483336, 3.362205150254791e-11, 8.940444592733577, 6.273105850163433, 3.412448697161386, 0.4370739814229856]
 abs_e0=[0.279803167104502, 0.0021528213104500134, 928.7717059555468, 155.73367646127838, 1.9864684046884364e-05, 0.026630409339232358, -0.006006758875122577, 9.799748258522194e-11, 8.940733077600111, 5.810040827846592, 4.077470828989698, 0.5247845922838983]
 #all_vals=[-0.19896709588060044, 0.0117447572739623, 663.0070333127449, 15.60742873191647, 0.0004775254125236546, -0.012948911979412857, 0.009191060972021893, 1.5331044249093517e-11, 8.605649285898744, 2.4548253689680077, 5.709340060264028, 0.5485117501096282]
+comp_vals=[-0.3055372331950631, 991.0626312468332, 89.21401193705475, 0.0007634486126395742, 0.0980481274632901, -0.005811384646150023, 5.3223663919983905e-11, 8.940733077600111, 5.771825413883179, 0.5901757781891152]
 
 
 
-titles=["Unchanged"]
-funcs=[harms.empty]
-results=[all_vals]
+titles=["Real", "Imaginary"]
+funcs=[np.real, np.imag]
+results=[comp_vals, comp_vals]
 """for i in range(0, len(reduced_vals)):
     vals[cyt.optim_list.index(reduced_list[i])]=imag_reduced_vals[i]
 print(vals)"""
@@ -180,8 +167,21 @@ for j in range(0, len(results)):
     y=np.fft.fft(hann_window(true_data))
     y2=np.fft.fft(hann_window(test_data))
     func=funcs[j]
-    covariance=np.cov(np.array([y, y2]), dtype="complex")
+    covariance=np.cov(np.array([np.real(y), np.imag(y)*1j],dtype="complex"))
     print(covariance)
+    inv_cov=np.linalg.inv(covariance)
+    print(-np.log(np.linalg.det(covariance)))
+    error=y-y2
+    real_error=np.mean(np.real(error))
+    imag_error=np.mean(np.imag(error))*1j
+    mean=np.array([real_error, imag_error])
+    hermite_error=np.transpose(np.conj(mean))
+    print(hermite_error)
+    term2=np.dot(hermite_error, inv_cov)
+    term2=np.dot(term2, mean)
+    print("complex?",term2)
+
+
     plt.plot(f[where_idx], func(y2[where_idx]), label="Simulation")
     plt.plot(f[where_idx], func(y[where_idx]), label="Data", alpha=0.7)
     plt.xlabel("Nondim Frequency")
@@ -191,8 +191,7 @@ for j in range(0, len(results)):
     plt.show()
     fourier_arg=cyt.top_hat_filter(true_data)
     cyt.secret_data_fourier=fourier_arg
-    test_fourier=cyt.test_vals(vals, "fourier", test=False)
-    cyt.def_optim_list(["E_0","k_0","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","cap_phase","phase", "alpha"])
+    test_fourier=cyt.test_vals(results[j], "fourier", test=False)
 
     data_harmonics=harms.generate_harmonics(time_results,(current_results), funcs[j])
     syn_harmonics=harms.generate_harmonics(time_results, (test_data), funcs[j])

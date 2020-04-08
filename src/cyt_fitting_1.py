@@ -18,7 +18,7 @@ data_loc=("/").join(dir_list[:-1])+"/Experiment_data/SV"
 files=os.listdir(data_loc)
 scan="1"
 freq="_9_"
-dec_amount=32
+dec_amount=16
 for file in files:
     if scan in file and freq in file:
 
@@ -51,15 +51,15 @@ param_list={
         'CdlE1': 0,
         'CdlE2': 0,
         "CdlE3":0,
-        'gamma': 1e-10,   # surface coverage per unit area
-        "original_gamma":1e-10,        # Nondimensionalising cvalue for surface coverage
+        'gamma': 1e-11,   # surface coverage per unit area
+        "original_gamma":1e-11,        # Nondimensionalising cvalue for surface coverage
         "k0_shape":0,
         "k0_scale":0,
         'k_0': 100, #(reaction rate s-1)
         'alpha': 0.5, #(Symmetry factor)
         'phase' : 3*(math.pi/2),#Phase of the input potential
         "cap_phase":3*(math.pi/2),
-        'sampling_freq' : (1.0/800),
+        'sampling_freq' : (1.0/400),
         "noise":0
     }
 likelihood_options=["timeseries", "fourier"]
@@ -67,7 +67,7 @@ simulation_options={
         "no_transient":2/param_list["omega"],
         "experimental_fitting":True,
         "method": "sinusoidal",
-        "likelihood":"timeseries",
+        "likelihood":"fourier",
         "phase_only":False,
         "dispersion_bins":[16],
         "dispersion_distributions":["lognormal"],
@@ -75,15 +75,13 @@ simulation_options={
         "GH_quadrature": False,
         "optim_list":[],
     }
-
 other_values={
         "filter_val": 0.5,
-        "harmonic_range":list(range(1,9,1)),
+        "harmonic_range":list(range(4,10,1)),
         "experiment_current":current_results,
         "experiment_time":time_results,
         "experiment_voltage":voltage_results,
-        "num_peaks": 30,
-        "bounds_val":20,
+        "num_peaks":20,
     }
 param_bounds={
     'E_0':[param_list["E_start"], param_list["E_reverse"]],#[param_list['E_start'],param_list['E_reverse']],
@@ -110,70 +108,51 @@ cyt=single_electron(file_name=None, dim_parameter_dictionary=param_list, simulat
 nd_current=cyt.other_values["experiment_current"]
 nd_voltage=cyt.other_values["experiment_voltage"]
 nd_time=cyt.other_values["experiment_time"]
-print(param_list["E_start"],param_list["E_reverse"] )
-cyt.def_optim_list(["E_0","k_0","Cdl","CdlE1", "CdlE2","Ru", "omega", "gamma", "alpha", "phase", "cap_phase"])
-
-vals=[-0.2, 100, 1e-4, 0, 0, 100.6737816215855, 8.94086695405389, 5.609826904007704e-11, 0.40000750225452375, 3*math.pi/2, 3*math.pi/2]
-test_data=cyt.test_vals(vals, "timeseries")
-plt.plot(nd_voltage, test_data)
+print(len(nd_current))
+plt.plot(cyt.e_nondim(nd_voltage), nd_current)
 plt.show()
-filtered=cyt.top_hat_filter(nd_current)
-#plt.plot(nd_time, filtered)
-#plt.plot(nd_voltage, nd_current, alpha=0.7)
-#plt.legend()
-#plt.show()
-harms=harmonics(cyt.simulation_options["harmonic_range"], cyt.dim_dict["omega"]*cyt.nd_param.c_T0, 0.05)
-data_harmonics=harms.generate_harmonics(nd_time, nd_current)
-#for i in range(0, len(data_harmonics)):
-#    plt.subplot(len(data_harmonics), 1, i+1)
-#    plt.plot(nd_voltage, data_harmonics[i,:])
-#plt.show()
 #cyt.def_optim_list(["E0_mean", "E0_std","k_0","Cdl","CdlE1", "CdlE2","CdlE3","Ru", "omega", "gamma", "alpha", "phase", "cap_phase"])
-
-true_data=test_data
-fourier_arg=cyt.top_hat_filter(test_data)
-plt.plot(fourier_arg)
-plt.legend()
-plt.show()
-cyt.secret_data_fourier=fourier_arg
+cyt.def_optim_list(["E_0","k_0","Cdl","CdlE1", "CdlE2","CdlE3","Ru", "omega", "gamma", "alpha", "phase", "cap_phase"])
+true_data=nd_current
+fourier_arg=cyt.top_hat_filter(nd_current)
 if simulation_options["likelihood"]=="timeseries":
     cmaes_problem=pints.SingleOutputProblem(cyt, nd_time, true_data)
 elif simulation_options["likelihood"]=="fourier":
     dummy_times=np.linspace(0, 1, len(fourier_arg))
     cmaes_problem=pints.SingleOutputProblem(cyt, dummy_times, fourier_arg)
-score = pints.SumOfSquaresError(cmaes_problem)#[4.56725844e-01, 4.44532637e-05, 2.98665132e-01, 2.96752050e-01, 3.03459391e-01]#
-CMAES_boundaries=pints.RectangularBoundaries(list([np.zeros(len(cyt.optim_list))]), list([np.ones(len(cyt.optim_list))]))
+score = pints.GaussianLogLikelihood(cmaes_problem)#[4.56725844e-01, 4.44532637e-05, 2.98665132e-01, 2.96752050e-01, 3.03459391e-01]#
+CMAES_boundaries=pints.RectangularBoundaries(list([np.zeros(len(cyt.optim_list)+1)]), list([np.ones(len(cyt.optim_list)+1)]))
 cyt.simulation_options["test"]=False
 num_runs=20
 param_mat=np.zeros((num_runs,len(cyt.optim_list)))
 score_vec=np.ones(num_runs)*1e6
 voltages=cyt.define_voltages(transient=True)
 for i in range(0, num_runs):
-    x0=abs(np.random.rand(cyt.n_parameters()))
+    x0=abs(np.random.rand(cyt.n_parameters()+1))
     print(len(x0), cmaes_problem.n_parameters(), CMAES_boundaries.n_parameters(), score.n_parameters())
     cmaes_fitting=pints.OptimisationController(score, x0, sigma0=None, boundaries=CMAES_boundaries, method=pints.CMAES)
     cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-7)
-    paralell=False#not cyt.simulation_options["test"]
+    paralell=not cyt.simulation_options["test"]
     print(paralell)
     cmaes_fitting.set_parallel(paralell)
     found_parameters, found_value=cmaes_fitting.run()
     print(found_parameters)
-    cmaes_results=cyt.change_norm_group(found_parameters[:], "un_norm")
+    cmaes_results=cyt.change_norm_group(found_parameters[:-1], "un_norm")
     print(list(cmaes_results))
     cmaes_time=cyt.test_vals(cmaes_results, likelihood="timeseries", test=False)
     if plot==True:
         if cyt.simulation_options["likelihood"]=="timeseries":
             plt.subplot(1,2,1)
             plt.plot(nd_voltage, cmaes_time)
-            plt.plot(nd_voltage, true_data, alpha=0.7)
+            plt.plot(nd_voltage, nd_current, alpha=0.7)
             plt.subplot(1,2,2)
             plt.plot(nd_time, cmaes_time)
-            plt.plot(nd_time, true_data, alpha=0.7)
+            plt.plot(nd_time, nd_current, alpha=0.7)
             plt.show()
         elif cyt.simulation_options["likelihood"]=="fourier":
             cyt.test_vals(cmaes_results, likelihood="fourier", test=True)
             harms=harmonics(cyt.simulation_options["harmonic_range"], cyt.dim_dict["omega"]*cyt.nd_param.c_T0, 0.05)
-            data_harmonics=harms.generate_harmonics(nd_time, true_data)
+            data_harmonics=harms.generate_harmonics(nd_time, nd_current)
             sim_harmonics=harms.generate_harmonics(nd_time, cmaes_time)
             for i in range(0, len(data_harmonics)):
                 plt.subplot(len(data_harmonics), 1, i+1)

@@ -11,7 +11,9 @@ class harmonics:
         print("initialised!")
     def reorder(list, order):
         return [list[i] for i in order]
-    def generate_harmonics(self, times, data):
+    def generate_harmonics(self, times, data, func=None):
+        if func==None:
+            func=self.empty
         L=len(data)
         window=np.hanning(L)
         time_series=data
@@ -27,7 +29,7 @@ class harmonics:
             #plt.axvline(true_harm, color="black")
             freq_idx=np.where((frequencies<(true_harm+(self.input_frequency*self.filter_val))) & (frequencies>true_harm-(self.input_frequency*self.filter_val)))
             filter_bit=(top_hat[freq_idx])
-            harmonics[i,np.where((frequencies<(true_harm+(self.input_frequency*self.filter_val))) & (frequencies>true_harm-(self.input_frequency*self.filter_val)))]=np.imag(filter_bit)
+            harmonics[i,np.where((frequencies<(true_harm+(self.input_frequency*self.filter_val))) & (frequencies>true_harm-(self.input_frequency*self.filter_val)))]=func(filter_bit)
             harmonics[i,:]=((np.fft.ifft(harmonics[i,:])))
         #plt.show()
         return harmonics

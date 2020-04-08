@@ -55,9 +55,9 @@ class single_electron:
             if simulation_options["method"]=="sinusoidal":
                 time_end=(self.nd_param.nd_param_dict["num_peaks"]/self.nd_param.nd_param_dict["omega"])
             elif simulation_options["method"]=="ramped":
-                time_end=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])
+                time_end=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])*self.nd_param.c_T0
             elif simulation_options["method"]=="dcv":
-                time_end=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])
+                time_end=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])*self.nd_param.c_T0
             if simulation_options["no_transient"]!=False:
                 if simulation_options["no_transient"]>time_end:
                     warnings.warn("Previous transient removal method detected")
@@ -70,6 +70,7 @@ class single_electron:
                     self.time_idx=desired_idx[0][0]
             else:
                 desired_idx=tuple(np.where(other_values["experiment_time"]<time_end))
+                print("TIME END", other_values["experiment_time"][-1])
                 time_idx=desired_idx
                 self.time_idx=0
             if self.file_init==False or results_flag==True:
@@ -81,13 +82,13 @@ class single_electron:
                 if simulation_options["method"]=="sinusoidal":
                     self.nd_param.nd_param_dict["time_end"]=(self.nd_param.nd_param_dict["num_peaks"])#/self.nd_param.nd_param_dict["omega"])
                 else:
-                    self.nd_param.nd_param_dict["time_end"]=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])
+                    self.nd_param.nd_param_dict["time_end"]=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])/self.nd_param.nd_param_dict["v"]
                 self.times()
         else:
             if simulation_options["method"]=="sinusoidal":
                 self.nd_param.nd_param_dict["time_end"]=(self.nd_param.nd_param_dict["num_peaks"])#/self.nd_param.nd_param_dict["omega"])
             else:
-                self.nd_param.nd_param_dict["time_end"]=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])
+                self.nd_param.nd_param_dict["time_end"]=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])/self.nd_param.nd_param_dict["v"]
             self.times()
             if simulation_options["no_transient"]!=False:
                     transient_time=self.t_nondim(self.time_vec)
@@ -216,7 +217,7 @@ class single_electron:
 
         L=len(time_series)
         window=np.hanning(L)
-        #time_series=np.multiply(time_series, window)
+        time_series=np.multiply(time_series, window)
         f=np.fft.fftfreq(len(time_series), self.time_vec[1]-self.time_vec[0])
         Y=np.fft.fft(time_series)
         frequencies=f
@@ -252,7 +253,7 @@ class single_electron:
             results[freq_idx_1]=likelihood_1
             results[freq_idx_2]=likelihood_2
         comp_results=np.append((np.real(results)), np.imag(results))
-        return results
+        return (comp_results)
     def abs_transform(self, data):
         window=np.hanning(len(data))
         hanning_transform=np.multiply(window, data)
