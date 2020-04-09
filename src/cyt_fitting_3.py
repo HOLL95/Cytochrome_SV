@@ -23,15 +23,21 @@ for file in files:
         elif "voltage" in file:
             voltage_data=np.loadtxt(data_loc+"/"+file)
 try:
-    current_results=current_data[0::dec_amount,1]
-    time_results=current_data[0::dec_amount,0]
+    current_results1=current_data[0::dec_amount,1]
+    time_results1=current_data[0::dec_amount,0]
 except:
     raise ValueError("No current file of that scan and frequency found")
 try:
-    voltage_results=voltage_data[0::dec_amount,1]
+    voltage_results1=voltage_data[0::dec_amount,1]
 except:
     raise ValueError("No voltage file of that scan and frequency found")
-for harmonic in range(3, 9):
+values=[[-0.21990071721861593, 44.01096292456005, 119.48426204727059, 0.0002451477915335569, 0.13729895076202486, 0.007928163599045154, 9.239820340868298e-11, 8.941077048962455, 4.7123345102082865, 3.813219214475715, 0.5740881278500752],\
+        [-0.2515873899481767, 380.850371209114, 190.56427390559483, 0.0009996714551589862, 0.05283450443740578, 2.4559146124050746e-05, 9.979263862879792e-11, 8.94052872191747, 6.228679431228626, 3.5117346885780156, 0.4454217075669103],\
+        [-0.3737835519192576, 110.89381450977515, 192.9584698382905, 0.000999061235805586, 0.05059781896924842, 6.770899887461636e-05, 9.971258525476312e-11, 8.940476323669214, 1.5710812221704191, 4.285970106715876, 0.4074546974273283],\
+        [-0.3035803306837689, 133.5644652314799, 70.93960743168643, 0.0008576399748363899, 0.14120750241196917, 0.00908999058237603, 8.384891653172269e-11, 8.940392636062402, 6.028883772290079, 5.154957131517447, 0.5699823467206875]]
+count=-1
+for harmonic in range(2, 7):
+    count+=1
     print("~"*30, "harmonic=", harmonic, "~"*30)
     param_list={
         "E_0":0.2,
@@ -59,10 +65,6 @@ for harmonic in range(3, 9):
         'phase' :0.1,
         "time_end": None,
         'num_peaks': 30,
-        "noise_00":None,
-        "noise_01":None,
-        "noise_10":None,
-        "noise_11":None,
     }
     solver_list=["Bisect", "Brent minimisation", "Newton-Raphson", "inverted"]
     likelihood_options=["timeseries", "fourier"]
@@ -76,33 +78,33 @@ for harmonic in range(3, 9):
         "test": False,
         "method": "sinusoidal",
         "phase_only":False,
-        "likelihood":likelihood_options[1],
+        "likelihood":likelihood_options[0],
         "numerical_method": solver_list[1],
         "label": "MCMC",
         "optim_list":[]
     }
     other_values={
         "filter_val": 0.5,
-        "harmonic_range":list(range(harmonic,harmonic+3,1)),
-        "experiment_time": time_results,
-        "experiment_current": current_results,
-        "experiment_voltage":voltage_results,
+        "harmonic_range":list(range(3,9,1)),
+        "experiment_time": time_results1,
+        "experiment_current": current_results1,
+        "experiment_voltage":voltage_results1,
         "bounds_val":20,
     }
     param_bounds={
         'E_0':[param_list['E_start'],param_list['E_reverse']],
         'omega':[0.95*param_list['omega'],1.05*param_list['omega']],#8.88480830076,  #    (frequency Hz)
         'Ru': [0, 1e3],  #     (uncompensated resistance ohms)
-        'Cdl': [0,1e-3], #(capacitance parameters)
+        'Cdl': [0,1e-2], #(capacitance parameters)
         'CdlE1': [-0.05,0.15],#0.000653657774506,
         'CdlE2': [-0.01,0.01],#0.000245772700637,
         'CdlE3': [-0.01,0.01],#1.10053945995e-06,
-        'gamma': [0.1*param_list["original_gamma"],10*param_list["original_gamma"]],
-        'k_0': [0.1, 1e3], #(reaction rate s-1)
+        'gamma': [0.1*param_list["original_gamma"],100*param_list["original_gamma"]],
+        'k_0': [0.1, 1e4], #(reaction rate s-1)
         'alpha': [0.4, 0.6],
         "cap_phase":[math.pi/2, 2*math.pi],
-        "E0_mean":[0.2, 0.3],
-        "E0_std": [1e-5,  0.1],
+        "E0_mean":[-0.3, -0.1],
+        "E0_std": [1e-5,  0.5],
         "alpha_mean":[0.4, 0.65],
         "alpha_std":[1e-3, 0.3],
         "k0_shape":[0,1],
@@ -121,17 +123,20 @@ for harmonic in range(3, 9):
     time_results=cyt.other_values["experiment_time"]
     current_results=cyt.other_values["experiment_current"]
     voltage_results=cyt.other_values["experiment_voltage"]
+    plt.plot(voltage_results, current_results)
     cyt.dim_dict["noise"]=0
     cyt.dim_dict["phase"]=3*math.pi/2
     print(len(current_results))
     #cyt.def_optim_list(["E_0","k0_shape", "k0_scale","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","cap_phase","phase", "alpha"])
-    cyt.simulation_options["dispersion_bins"]=[5]
+    cyt.simulation_options["dispersion_bins"]=[10]
     cyt.simulation_options["GH_quadrature"]=True
     cyt.def_optim_list(["E_0","k_0","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","cap_phase","phase", "alpha"])
 
+
     reduced_list=["E_0","k_0","Ru","gamma","omega","cap_phase","phase", "alpha"]
     vals=[-0.2115664620575202,  50.70216501235601, 1.2299591730542196e-08, 1e-5, 0.02019028489306987, 0.0021412236896496805, 7.777463350920317e-11, 8.940744445900455, 4.371233348216213, 3.393780500934783, 0.5310264089857374]
-    true_signal=cyt.test_vals(vals, "timeseries")
+    true_signal=cyt.test_vals(values[count], "timeseries")
+
     f_true=cyt.test_vals(vals, "fourier")
     test_data=cyt.add_noise(true_signal, 0.005*max(true_signal))
     true_data=current_results
@@ -144,6 +149,7 @@ for harmonic in range(3, 9):
     data_harmonics=harms.generate_harmonics(time_results,(current_results))
     syn_harmonics=harms.generate_harmonics(time_results, (test_data))
 
+
     """
     fig, ax=plt.subplots(len(data_harmonics), 1)
     for i in range(0, len(data_harmonics)):
@@ -155,15 +161,20 @@ for harmonic in range(3, 9):
         ax2.set_yticks([])
         ax2.set_ylabel(other_values["harmonic_range"][i])
     plt.show()"""
-
-
+    #cyt.dim_dict["gamma"]=0
+    #cyt.time_idx=tuple(np.where((voltage_results>-2) | (voltage_results<-11.5)))
+    cdl_params=["Cdl","CdlE1", "CdlE2", "omega", "cap_phase"]
+    cdl_vals=[0.00030764786682391357, 0.03582359290423001, 0.0008127967773842327, 8.940837757217324, 4.309734318241762]
+    for z in range(0, len(cdl_vals)):
+        cyt.dim_dict[cdl_params[z]]=cdl_vals[z]
+    cyt.def_optim_list(["E0_mean", "E0_std","k_0","Ru", "gamma", "alpha"])
     #cyt.def_optim_list(["E_0","k_0","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","cap_phase", "phase", "alpha"])#, "noise_00", "noise_01", "noise_10", "noise_11"
     if simulation_options["likelihood"]=="timeseries":
         cmaes_problem=pints.SingleOutputProblem(cyt, time_results, true_data)
     elif simulation_options["likelihood"]=="fourier":
         dummy_times=np.linspace(0, 1, len(fourier_arg))
         cmaes_problem=pints.SingleOutputProblem(cyt, dummy_times, fourier_arg)
-    score = pints.GaussianLogLikelihood(cmaes_problem)#[4.56725844e-01, 4.44532637e-05, 2.98665132e-01, 2.96752050e-01, 3.03459391e-01]#
+    score = pints.SumOfSquaresError(cmaes_problem)#[4.56725844e-01, 4.44532637e-05, 2.98665132e-01, 2.96752050e-01, 3.03459391e-01]#
     """x0=np.random.rand(cyt.n_parameters())
     x0_vals=[-0.4398655594202501, 4.718608302867817, 25.780060141795115, 0.0009607039629253518, 0.014366036483479602, -0.008964590734026388, 9.65856012375879e-11, 8.623237722997326, 5.412009394070987, 5.309059493022305, 0.4193561932667581]
 
@@ -182,7 +193,7 @@ for harmonic in range(3, 9):
 
 
 
-    CMAES_boundaries=pints.RectangularBoundaries(list(np.zeros(len(cyt.optim_list)+1)), list(np.ones(len(cyt.optim_list)+1)))
+    CMAES_boundaries=pints.RectangularBoundaries(list(np.zeros(len(cyt.optim_list))), list(np.ones(len(cyt.optim_list))))
     cyt.simulation_options["label"]="cmaes"
     cyt.simulation_options["test"]=False
     #cyt.simulation_options["test"]=True
@@ -190,24 +201,25 @@ for harmonic in range(3, 9):
     param_mat=np.zeros((num_runs,len(cyt.optim_list)))
     score_vec=np.ones(num_runs)*1e6
 
+
     for i in range(0, num_runs):
-        x0=abs(np.random.rand(cyt.n_parameters()+1))#cyt.change_norm_group(gc4_3_low_ru, "norm")
+        x0=abs(np.random.rand(cyt.n_parameters()))#cyt.change_norm_group(gc4_3_low_ru, "norm")
         print(len(x0), cmaes_problem.n_parameters(), CMAES_boundaries.n_parameters(), score.n_parameters())
         cmaes_fitting=pints.OptimisationController(score, x0, sigma0=None, boundaries=CMAES_boundaries, method=pints.CMAES)
         cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-7)
-        cmaes_fitting.set_parallel(False)
+        cmaes_fitting.set_parallel(True)
         found_parameters, found_value=cmaes_fitting.run()
         print(found_parameters)
-        cmaes_results=cyt.change_norm_group(found_parameters[:-1], "un_norm")
+        cmaes_results=cyt.change_norm_group(found_parameters[:], "un_norm")
         print(list(cmaes_results))
         cmaes_time=cyt.test_vals(cmaes_results, likelihood="timeseries", test=False)
         #plt.subplot(1,2,1)
-        #plt.plot(voltage_results, cmaes_time)
-        #plt.plot(voltage_results, true_data, alpha=0.5)
+        plt.plot(voltage_results, cmaes_time)
+        plt.plot(voltage_results, true_data, alpha=0.5)
         #plt.subplot(1,2,2)
         #plt.plot(time_results, cyt.define_voltages()[cyt.time_idx:])
         #plt.plot(time_results, voltage_results)
-        #plt.show()
+        plt.show()
         #cmaes_fourier=cyt.test_vals(cmaes_results, likelihood="fourier", test=False)
         #param_mat[i,:]=cmaes_results
         #score_vec[i]=found_value

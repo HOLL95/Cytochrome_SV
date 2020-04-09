@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018) (preloaded format=pdflatex 2020.4.2)  2 APR 2020 08:50
+This is pdfTeX, Version 3.14159265-2.6-1.40.19 (TeX Live 2018) (preloaded format=pdflatex 2020.4.2)  9 APR 2020 09:01
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -96,8 +96,7 @@ Package geometry Warning: `lmargin' and `rmargin' result in NEGATIVE (-296.1931
 8pt).
     `width' should be shortened in length.
 
-)
-No file image_tex_edited.aux.
+) (./image_tex_edited.aux)
 \openout1 = `image_tex_edited.aux'.
 
 LaTeX Font Info:    Checking defaults for OML/cmm/m/it on input line 3.
@@ -112,6 +111,7 @@ LaTeX Font Info:    Checking defaults for OMX/cmex/m/n on input line 3.
 LaTeX Font Info:    ... okay on input line 3.
 LaTeX Font Info:    Checking defaults for U/cmr/m/n on input line 3.
 LaTeX Font Info:    ... okay on input line 3.
+
 Preview: Fontsize 10pt
 Preview: PDFoutput 1
 *geometry* driver: auto-detecting
@@ -156,8 +156,8 @@ Preview: Tightpage 0 0 0 0
 [1{/usr/share/texlive/texmf-dist/fonts/map/pdftex/updmap/pdftex.map}]
 (./image_tex_edited.aux) ) 
 Here is how much of TeX's memory you used:
- 1296 strings out of 493791
- 19697 string characters out of 6154590
+ 1298 strings out of 493791
+ 19739 string characters out of 6154590
  86280 words of memory out of 5000000
  5038 multiletter control sequences out of 15000+600000
  3640 words of font info for 14 fonts, out of 8000000 for 9000
@@ -168,7 +168,7 @@ fonts/cm/cmmi10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/
 cm/cmmi7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr1
 0.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmr7.pfb></
 usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb>
-Output written on image_tex_edited.pdf (1 page, 51949 bytes).
+Output written on image_tex_edited.pdf (1 page, 50711 bytes).
 PDF statistics:
  28 PDF objects out of 1000 (max. 8388607)
  19 compressed objects within 1 object stream

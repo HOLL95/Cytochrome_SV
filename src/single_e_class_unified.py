@@ -50,6 +50,7 @@ class single_electron:
         self.num_harmonics=len(self.harmonic_range)
         self.filter_val=other_values["filter_val"]
         self.bounds_val=other_values["bounds_val"]
+
         self.time_array=[]
         if self.simulation_options["experimental_fitting"]==True:
             if simulation_options["method"]=="sinusoidal":
@@ -61,18 +62,17 @@ class single_electron:
             if simulation_options["no_transient"]!=False:
                 if simulation_options["no_transient"]>time_end:
                     warnings.warn("Previous transient removal method detected")
-                    time_idx=tuple(np.where(other_values["experiment_time"]<time_end))
+                    time_idx=tuple(np.where(other_values["experiment_time"]<=time_end))
                     desired_idx=tuple((range(simulation_options["no_transient"],time_idx[0][-1])))
-                    self.time_idx=desired_idx[0]
+                    self.time_idx=time_idx[:-1]
                 else:
-                    desired_idx=tuple(np.where((other_values["experiment_time"]<time_end) & (other_values["experiment_time"]>simulation_options["no_transient"])))
-                    time_idx=tuple(np.where(other_values["experiment_time"]<time_end))
-                    self.time_idx=desired_idx[0][0]
+                    time_idx=tuple(np.where((other_values["experiment_time"]<=time_end) & (other_values["experiment_time"]>simulation_options["no_transient"])))
+                    desired_idx=time_idx
+                    self.time_idx=time_idx[:-1]
             else:
-                desired_idx=tuple(np.where(other_values["experiment_time"]<time_end))
-                print("TIME END", other_values["experiment_time"][-1])
+                desired_idx=tuple(np.where(other_values["experiment_time"]<=time_end))
                 time_idx=desired_idx
-                self.time_idx=0
+                self.time_idx=time_idx[:-1]
             if self.file_init==False or results_flag==True:
                 self.time_vec=other_values["experiment_time"][time_idx]/self.nd_param.c_T0
                 other_values["experiment_time"]=other_values["experiment_time"][desired_idx]/self.nd_param.c_T0
@@ -93,9 +93,10 @@ class single_electron:
             if simulation_options["no_transient"]!=False:
                     transient_time=self.t_nondim(self.time_vec)
                     start_idx=np.where(transient_time>simulation_options["no_transient"])
-                    self.time_idx=start_idx[0][0]
+                    self.time_idx=time_idx[:-1]
             else:
-                    self.time_idx=0
+                    desired_idx=tuple(np.where(other_values["experiment_time"]<=time_end))
+                    self.time_idx=desired_idx[:-1]
         self.def_optim_list(self.simulation_options["optim_list"])
         frequencies=np.fft.fftfreq(len(self.time_vec), self.time_vec[1]-self.time_vec[0])
         self.frequencies=frequencies[np.where(frequencies>0)]
@@ -211,7 +212,7 @@ class single_electron:
             for i in range(0, len(self.time_vec)):
                 voltages[i]=isolver_martin_brent.dcv_et(self.nd_param.nd_param_dict["E_start"], self.nd_param.nd_param_dict["E_reverse"], (self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]) , 1,(self.time_vec[i]))
         if transient==True:
-            voltages=voltages[self.time_idx:]
+            voltages=voltages[self.time_idx]
         return voltages
     def top_hat_filter(self, time_series):
 
@@ -282,7 +283,7 @@ class single_electron:
     def calc_theta(self, current):
         voltages=self.define_voltages()
         if self.simulation_options["no_transient"]!=True:
-            voltages=voltages[self.time_idx:]
+            voltages=voltages[self.time_idx]
         theta=np.zeros(len(current))
         theta[0]=0
         dt=self.nd_param.nd_param_dict["sampling_freq"]
@@ -400,9 +401,11 @@ class single_electron:
                 time_series=self.paralell_disperse(solver)
             else:
                 time_series=solver(self.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val)
-        if self.simulation_options["no_transient"]!=False:
-            time_series=time_series[self.time_idx:]
         time_series=np.array(time_series)
+        if self.simulation_options["no_transient"]!=False:
+            time_series=time_series[self.time_idx]
+
+
         if self.simulation_options["likelihood"]=='fourier':
             filtered=self.top_hat_filter(time_series)
             if (self.simulation_options["test"]==True):
@@ -430,8 +433,8 @@ class single_electron:
                     plt.plot(self.other_values["experiment_time"],self.secret_data_time_series, alpha=0.7)
                     plt.show()
                 else:
-                    plt.plot(self.time_vec[self.time_idx:], time_series)
-                    plt.plot(self.time_vec[self.time_idx:], self.secret_data_time_series)
+                    plt.plot(self.time_vec[self.time_idx], time_series)
+                    plt.plot(self.time_vec[self.time_idx], self.secret_data_time_series)
                     plt.show()
             return (time_series)
 class paralell_class:
