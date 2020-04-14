@@ -83,9 +83,10 @@ for harmonic in range(2, 7):
         "label": "MCMC",
         "optim_list":[]
     }
+
     other_values={
         "filter_val": 0.5,
-        "harmonic_range":list(range(3,9,1)),
+        "harmonic_range":list(range(3,15,1)),
         "experiment_time": time_results1,
         "experiment_current": current_results1,
         "experiment_voltage":voltage_results1,
@@ -103,7 +104,7 @@ for harmonic in range(2, 7):
         'k_0': [0.1, 1e4], #(reaction rate s-1)
         'alpha': [0.4, 0.6],
         "cap_phase":[math.pi/2, 2*math.pi],
-        "E0_mean":[-0.3, -0.1],
+        "E0_mean":[param_list['E_start'],param_list['E_reverse']],
         "E0_std": [1e-5,  0.5],
         "alpha_mean":[0.4, 0.65],
         "alpha_std":[1e-3, 0.3],
@@ -123,31 +124,38 @@ for harmonic in range(2, 7):
     time_results=cyt.other_values["experiment_time"]
     current_results=cyt.other_values["experiment_current"]
     voltage_results=cyt.other_values["experiment_voltage"]
-    plt.plot(voltage_results, current_results)
+    #plt.plot(time_results, current_results)
     cyt.dim_dict["noise"]=0
     cyt.dim_dict["phase"]=3*math.pi/2
     print(len(current_results))
     #cyt.def_optim_list(["E_0","k0_shape", "k0_scale","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","cap_phase","phase", "alpha"])
     cyt.simulation_options["dispersion_bins"]=[10]
     cyt.simulation_options["GH_quadrature"]=True
-    cyt.def_optim_list(["E_0","k_0","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","cap_phase","phase", "alpha"])
+    cyt.def_optim_list(["E0_mean", "E0_std","k_0","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","cap_phase","phase", "alpha"])
 
 
-    reduced_list=["E_0","k_0","Ru","gamma","omega","cap_phase","phase", "alpha"]
-    vals=[-0.2115664620575202,  50.70216501235601, 1.2299591730542196e-08, 1e-5, 0.02019028489306987, 0.0021412236896496805, 7.777463350920317e-11, 8.940744445900455, 4.371233348216213, 3.393780500934783, 0.5310264089857374]
-    true_signal=cyt.test_vals(values[count], "timeseries")
+    reduced_list=["E_0","k_0","Ru","gamma","omega","cap_pha100se","phase", "alpha"]
+    vals=[-0.2499999999795545, 0.3997722688641264, 9999.999440245034, 114.8382192838832, 0.00013334402533556777, 0.1077568991954742, 0.0028577794838729777, 1.192053173965407e-10, 8.938971787355355, 1.570796326795171, 4.738470849368598, 0.5999999996633747]
+    true_signal=cyt.test_vals(vals, "timeseries")
 
     f_true=cyt.test_vals(vals, "fourier")
-    test_data=cyt.add_noise(true_signal, 0.005*max(true_signal))
+    #test_data=cyt.add_noise(true_signal, 0.005*max(true_signal))
     true_data=current_results
     #true_data=current_results
     fourier_arg=cyt.top_hat_filter(true_data)
 
-    cov=np.cov(true_data)
+    true_data=np.real(np.fft.ifft(fourier_arg))#[:len(fourier_arg)//2]
+    cyt.secret_data_time_series=true_data
+    print("Hello?")
+    #plt.plot(true_signal)
+    plt.plot(true_data)
+    plt.legend()
+    plt.show()
+    plt.show()
     test_fourier=cyt.test_vals(vals, "fourier", test=False)
     harms=harmonics(cyt.other_values["harmonic_range"], cyt.dim_dict["omega"]*cyt.nd_param.c_T0, 0.5)
     data_harmonics=harms.generate_harmonics(time_results,(current_results))
-    syn_harmonics=harms.generate_harmonics(time_results, (test_data))
+    syn_harmonics=harms.generate_harmonics(time_results, true_data)
 
 
     """
@@ -162,12 +170,18 @@ for harmonic in range(2, 7):
         ax2.set_ylabel(other_values["harmonic_range"][i])
     plt.show()"""
     #cyt.dim_dict["gamma"]=0
-    #cyt.time_idx=tuple(np.where((voltage_results>-2) | (voltage_results<-11.5)))
-    cdl_params=["Cdl","CdlE1", "CdlE2", "omega", "cap_phase"]
+    #cyt.time_idx=tuple(np.where((voltage_results<-2) & (voltage_results>-12.5)))
     cdl_vals=[0.00030764786682391357, 0.03582359290423001, 0.0008127967773842327, 8.940837757217324, 4.309734318241762]
+
+    cdl_params=["Cdl","CdlE1", "CdlE2", "omega", "cap_phase"]
     for z in range(0, len(cdl_vals)):
         cyt.dim_dict[cdl_params[z]]=cdl_vals[z]
-    cyt.def_optim_list(["E0_mean", "E0_std","k_0","Ru", "gamma", "alpha"])
+    cyt.def_optim_list(["E0_mean", "E0_std","k_0","Ru", "gamma", "alpha", "phase"])
+    cyt.def_optim_list(["E0_mean", "E0_std","k_0","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","cap_phase","phase", "alpha"])
+    plt.plot(voltage_results, true_data)
+    plt.show()
+
+
     #cyt.def_optim_list(["E_0","k_0","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","cap_phase", "phase", "alpha"])#, "noise_00", "noise_01", "noise_10", "noise_11"
     if simulation_options["likelihood"]=="timeseries":
         cmaes_problem=pints.SingleOutputProblem(cyt, time_results, true_data)
@@ -207,7 +221,7 @@ for harmonic in range(2, 7):
         print(len(x0), cmaes_problem.n_parameters(), CMAES_boundaries.n_parameters(), score.n_parameters())
         cmaes_fitting=pints.OptimisationController(score, x0, sigma0=None, boundaries=CMAES_boundaries, method=pints.CMAES)
         cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-7)
-        cmaes_fitting.set_parallel(True)
+        cmaes_fitting.set_parallel(False)
         found_parameters, found_value=cmaes_fitting.run()
         print(found_parameters)
         cmaes_results=cyt.change_norm_group(found_parameters[:], "un_norm")

@@ -218,7 +218,7 @@ class single_electron:
 
         L=len(time_series)
         window=np.hanning(L)
-        time_series=np.multiply(time_series, window)
+        #time_series=np.multiply(time_series, window)
         f=np.fft.fftfreq(len(time_series), self.time_vec[1]-self.time_vec[0])
         Y=np.fft.fft(time_series)
         frequencies=f
@@ -254,7 +254,7 @@ class single_electron:
             results[freq_idx_1]=likelihood_1
             results[freq_idx_2]=likelihood_2
         comp_results=np.append((np.real(results)), np.imag(results))
-        return (comp_results)
+        return (results)
     def abs_transform(self, data):
         window=np.hanning(len(data))
         hanning_transform=np.multiply(window, data)
