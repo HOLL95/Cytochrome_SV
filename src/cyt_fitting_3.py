@@ -78,7 +78,7 @@ for harmonic in range(2, 7):
         "test": False,
         "method": "sinusoidal",
         "phase_only":False,
-        "likelihood":likelihood_options[0],
+        "likelihood":likelihood_options[1],
         "numerical_method": solver_list[1],
         "label": "MCMC",
         "optim_list":[]
@@ -136,6 +136,8 @@ for harmonic in range(2, 7):
 
     reduced_list=["E_0","k_0","Ru","gamma","omega","cap_pha100se","phase", "alpha"]
     vals=[-0.2499999999795545, 0.3997722688641264, 9999.999440245034, 114.8382192838832, 0.00013334402533556777, 0.1077568991954742, 0.0028577794838729777, 1.192053173965407e-10, 8.938971787355355, 1.570796326795171, 4.738470849368598, 0.5999999996633747]
+    vals=[-0.3152122174013743, 0.28357512333528784, 464.8367255826205, 20.645888957700034, 2.6724941197529202e-05, -0.04999999999850869, -0.005846400851874563, 1.3189947035043904e-10, 8.937882789293578, 1.5707963267988925, 4.743664540414751, 0.40000000000583846]
+    ifft_vals=[-0.3152122174013743, 0.28357512333528784, 464.8367255826205, 20.645888957700034, 2.6724941197529202e-05, -0.04999999999850869, -0.005846400851874563, 1.3189947035043904e-10, 8.937882789293578, 1.5707963267988925, 4.743664540414751, 0.40000000000583846]
     true_signal=cyt.test_vals(vals, "timeseries")
 
     f_true=cyt.test_vals(vals, "fourier")
@@ -149,6 +151,7 @@ for harmonic in range(2, 7):
     print("Hello?")
     #plt.plot(true_signal)
     plt.plot(true_data)
+    plt.plot(true_signal)
     plt.legend()
     plt.show()
     plt.show()
@@ -218,6 +221,7 @@ for harmonic in range(2, 7):
 
     for i in range(0, num_runs):
         x0=abs(np.random.rand(cyt.n_parameters()))#cyt.change_norm_group(gc4_3_low_ru, "norm")
+        x0=cyt.change_norm_group(ifft_vals, "norm")
         print(len(x0), cmaes_problem.n_parameters(), CMAES_boundaries.n_parameters(), score.n_parameters())
         cmaes_fitting=pints.OptimisationController(score, x0, sigma0=None, boundaries=CMAES_boundaries, method=pints.CMAES)
         cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-7)

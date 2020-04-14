@@ -254,7 +254,7 @@ class single_electron:
             results[freq_idx_1]=likelihood_1
             results[freq_idx_2]=likelihood_2
         comp_results=np.append((np.real(results)), np.imag(results))
-        return (results)
+        return (comp_results)
     def abs_transform(self, data):
         window=np.hanning(len(data))
         hanning_transform=np.multiply(window, data)
