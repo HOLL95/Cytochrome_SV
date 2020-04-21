@@ -218,7 +218,7 @@ class single_electron:
 
         L=len(time_series)
         window=np.hanning(L)
-        #time_series=np.multiply(time_series, window)
+        time_series=np.multiply(time_series, window)
         f=np.fft.fftfreq(len(time_series), self.time_vec[1]-self.time_vec[0])
         Y=np.fft.fft(time_series)
         frequencies=f
@@ -430,7 +430,7 @@ class single_electron:
                     plt.plot(self.other_values["experiment_voltage"],time_series)
                     plt.subplot(1,2,2)
                     plt.plot(self.other_values["experiment_time"],time_series)
-                    plt.plot(self.other_values["experiment_time"],self.secret_data_time_series, alpha=0.7)
+                    #plt.plot(self.other_values["experiment_time"],self.secret_data_time_series, alpha=0.7)
                     plt.show()
                 else:
                     plt.plot(self.time_vec[self.time_idx], time_series)
