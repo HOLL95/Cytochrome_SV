@@ -109,7 +109,7 @@ param_bounds={
     'CdlE2inv': [-2,2],#0.000245772700637,
     'CdlE3inv': [-2,2],#1.10053945995e-06,
     'gamma': [0.1*param_list["original_gamma"],100*param_list["original_gamma"]],
-    'k_0': [0.1, 1e4], #(reaction rate s-1)
+    'k_0': [0, 1e4], #(reaction rate s-1)
     'alpha': [0.4, 0.6],
     "cap_phase":[math.pi/2, 2*math.pi],
     "E0_mean":[param_list['E_start'],param_list['E_reverse']],
