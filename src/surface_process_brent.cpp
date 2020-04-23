@@ -1,5 +1,5 @@
-#include <pybind11/pybind11.h>
-#include <pybind11/stl.h>
+#include </home/henney/Documents/Oxford/C++_libraries/pybind11/include/pybind11/pybind11.h>
+#include </home/henney/Documents/Oxford/C++_libraries/pybind11/include/pybind11/stl.h>
 #include <boost/math/tools/minima.hpp>
 #include <boost/math/constants/constants.hpp>
 #include <boost/math/tools/roots.hpp>
@@ -187,10 +187,10 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
     const double gamma = get(params,std::string("gamma"),1.0);
     const double E0 = get(params,std::string("E_0"),0.25);
     const double Ru = get(params,std::string("Ru"),0.001);
-    const double Cdl = get(params,std::string("Cdl"),0.0037);
-    const double CdlE = get(params,std::string("CdlE1"),0.0);
-    const double CdlE2 = get(params,std::string("CdlE2"),0.0);
-    const double CdlE3 = get(params,std::string("CdlE3"),0.0);
+    double Cdl = get(params,std::string("Cdl"),0.0037);
+    double CdlE = get(params,std::string("CdlE1"),0.0);
+    double CdlE2 = get(params,std::string("CdlE2"),0.0);
+    double CdlE3 = get(params,std::string("CdlE3"),0.0);
     const double E_start = get(params,std::string("E_start"),-10.0);
     const double E_reverse = get(params,std::string("E_reverse"),10.0);
     const double pi = boost::math::constants::pi<double>();
@@ -198,6 +198,10 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
     const double phase = get(params,std::string("phase"),0.0);
     const double cap_phase = get(params,std::string("cap_phase"),0.0);
     const double delta_E = get(params,std::string("d_E"),0.1);
+    double Cdlinv;
+    double CdlEinv;
+    double CdlE2inv;
+    double CdlE3inv;
     const double dt=  t[1]-t[0];
     double Itot0,Itot1;
     double u1n0;
@@ -228,6 +232,11 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
     else if (input==2){
       E=dcv_et(E_start, E_reverse,tr,v, t1);
       dE=dcv_dEdt(tr,v, t1+0.5*dt);
+      Cdlinv = get(params,std::string("Cdlinv"),0.0);
+      CdlEinv = get(params,std::string("CdlE1inv"),0.0);
+      CdlE2inv = get(params,std::string("CdlE2inv"),0.0);
+      CdlE3inv = get(params,std::string("CdlE3inv"),0.0);
+
     }
     //cout<<E<<" "<<dE<<" "<<" "<<Cdl<<" "<<CdlE<<" "<<CdlE2<<" "<<CdlE3<<" "<<E0<<" "<<Ru<<" "<<k0<<" "<<alpha<<" "<<Itot0<<" "<<u1n0<<" "<<dt<<" "<<gamma<<" dicts"<<"\n";
 
@@ -252,6 +261,12 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
               E=dcv_et(E_start, E_reverse,tr,v, t1);
               dE=dcv_dEdt(tr,v, t1+0.5*dt);
               cap_E=E;
+              if (t1 > tr){
+                Cdl=Cdlinv;
+                CdlE=CdlEinv;
+                CdlE2=CdlE2inv;
+                CdlE3=CdlE3inv;
+               }
             }
             e_surface_fun bc(E,dE,cap_E,Cdl,CdlE,CdlE2,CdlE3,E0,Ru,k0,alpha,Itot0,u1n0,dt,gamma);
             boost::uintmax_t max_it = max_iterations;

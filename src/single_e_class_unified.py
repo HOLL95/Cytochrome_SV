@@ -430,7 +430,7 @@ class single_electron:
                     plt.plot(self.other_values["experiment_voltage"],time_series)
                     plt.subplot(1,2,2)
                     plt.plot(self.other_values["experiment_time"],time_series)
-                    #plt.plot(self.other_values["experiment_time"],self.secret_data_time_series, alpha=0.7)
+                    plt.plot(self.other_values["experiment_time"],self.secret_data_time_series, alpha=0.7)
                     plt.show()
                 else:
                     plt.plot(self.time_vec[self.time_idx], time_series)

@@ -32,7 +32,9 @@ try:
 except:
     raise ValueError("No voltage file of that scan and frequency found")
 values=values=[[-0.2120092471414607, 0.000005478233474769771, 116.21497065365581, 431.92918718571053, 0.00044100528598203375, 0.14367030986553458, 0.005163770653874243, 9.999387751676114e-11, 8.881077023434541,0, 0.5997147084901965],\
-                [-0.2485010348585462, 0.03769719441256009, 500.88915054231003, 1.7895281614545, 0.000108185721998072834*0, 0.14858346584854376*0, 0.005464884000805036*0, 1.995887932170653e-11, 8.88129543205022, 0, 0.5990602813196874],
+                [-0.2485010348585462, 0.06702142523298088, 500.88915054231003, 876.7895281614545, 0.000108185721998072834*0, 0.14858346584854376*0, 0.005464884000805036*0, 1.1040282150229229e-10, 8.88129543205022, 0, 0.5990602813196874],
+                [-0.2661180439669948, 0.06702142523298088, 81251.01912987458, 876.5733127765511, 0.000108185721998072834*0, 0.14858346584854376*0, 0.005464884000805036*0,1.1040282150229229e-10,  8.88129543205022, 0,0.41024786661899215]
+
 ]
 plt.plot(voltage_results1, current_results1)
 plt.show()
@@ -94,7 +96,7 @@ for q in range(0, len(values)):
         "experiment_time": time_results1,
         "experiment_current": current_results1,
         "experiment_voltage":voltage_results1,
-        "bounds_val":2000,
+        "bounds_val":20000,
     }
     param_bounds={
         'E_0':[param_list['E_start'],param_list['E_reverse']],
@@ -125,13 +127,13 @@ for q in range(0, len(values)):
 
     harms=harmonics(cyt.other_values["harmonic_range"], cyt.dim_dict["omega"]*cyt.nd_param.c_T0, 0.5)
     data_harmonics=harms.generate_harmonics(time_results,(current_results))
-    cyt.simulation_options["dispersion_bins"]=[10]
+    cyt.simulation_options["dispersion_bins"]=[20]
     cyt.simulation_options["GH_quadrature"]=True
     cyt.def_optim_list(["E0_mean", "E0_std","k_0","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","phase", "alpha"])
 
     vals=[-0.2085010348585462, 0.05769719441256009, 300.88915054231003, 621.7895281614545, 0.00038185721998072834*0, 0.14858346584854376, 0.005464884000805036, 1.995887932170653e-11, 8.88, 3.481574064188825, 0.5990602813196874]
     vals=[-0.2120092471414607, 0.0005478233474769771, 1000.21497065365581, 431.92918718571053, 0.00044100528598203375*0, 0.14367030986553458, 0.005163770653874243, 9.999387751676114e-11, 8.941077023434541,  3.4597619059667073, 0.5997147084901965]
-    syn_time=cyt.test_vals(values[1], "timeseries")
+    syn_time=cyt.test_vals(values[q], "timeseries")
     syn_harmonics=harms.generate_harmonics(time_results,(syn_time))
     cyt.simulation_options["method"]="dcv"
     dcv_volt=cyt.e_nondim(cyt.define_voltages())
@@ -160,7 +162,7 @@ syn_time=cyt.test_vals(v, "timeseries")
 true_data=syn_time
 fourier_arg=cyt.top_hat_filter(true_data)
 cyt.secret_data_fourier=fourier_arg
-
+cyt.secret_data_time_series=true_data
 if simulation_options["likelihood"]=="timeseries":
     cmaes_problem=pints.SingleOutputProblem(cyt, time_results, true_data)
 elif simulation_options["likelihood"]=="fourier":
@@ -175,7 +177,7 @@ cyt.test_vals([-0.350833644588847, 394.78950164933667, 606.7233683835361, 0.0008
 
 CMAES_boundaries=pints.RectangularBoundaries(list(np.zeros(len(cyt.optim_list))), list(np.ones(len(cyt.optim_list))))
 cyt.simulation_options["label"]="cmaes"
-cyt.simulation_options["test"]=False
+cyt.simulation_options["test"]=True
 #cyt.simulation_options["test"]=True
 num_runs=5
 param_mat=np.zeros((num_runs,len(cyt.optim_list)))
