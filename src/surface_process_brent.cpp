@@ -150,8 +150,8 @@ double dcv_dEdt( double tr, double v, double t){ //
 }
 std::vector<vector<double>> NR_function_surface(e_surface_fun &bc, double I_0, double I_minus, double I_bounds){
   cout<<"called"<<"\n";
-  double interval=I_bounds/1000;
-  int width=1000;
+  double interval=0.01;
+  int width=(1/interval)*10;
   double start=I_0-(width*interval);
   std::vector<vector<double>> diagnostic;
   diagnostic.resize(4, std::vector<double> ((width*2)+1));
@@ -198,20 +198,16 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
     const double phase = get(params,std::string("phase"),0.0);
     const double cap_phase = get(params,std::string("cap_phase"),0.0);
     const double delta_E = get(params,std::string("d_E"),0.1);
-    const double sf= get(params,std::string("sampling_freq"),0.1);
     double Cdlinv;
     double CdlEinv;
     double CdlE2inv;
     double CdlE3inv;
-    double dt=t[1]-t[0];
-    if (sf<dt){
-      dt=sf;
-    }
+    const double dt=  t[1]-t[0];
     double Itot0,Itot1;
     double u1n0;
     int input=-1; // 0 for ramped, 1 for sinusoidal, 2 for DCV
     double t1 = 0.0;
-    u1n0 = 0.0;
+    u1n0 = 1.0;
     double tr=E_reverse-E_start;
     if ((method.compare("ramped"))==0){
       input=0;
@@ -236,11 +232,15 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
     else if (input==2){
       E=dcv_et(E_start, E_reverse,tr,v, t1);
       dE=dcv_dEdt(tr,v, t1+0.5*dt);
+      Cdlinv = get(params,std::string("Cdlinv"),0.0);
+      CdlEinv = get(params,std::string("CdlE1inv"),0.0);
+      CdlE2inv = get(params,std::string("CdlE2inv"),0.0);
+      CdlE3inv = get(params,std::string("CdlE3inv"),0.0);
 
     }
     //cout<<E<<" "<<dE<<" "<<" "<<Cdl<<" "<<CdlE<<" "<<CdlE2<<" "<<CdlE3<<" "<<E0<<" "<<Ru<<" "<<k0<<" "<<alpha<<" "<<Itot0<<" "<<u1n0<<" "<<dt<<" "<<gamma<<" dicts"<<"\n";
-    double Er=E-(Ru*Cdl*dE);
-    const double Cdlp = Cdl*(1.0 + CdlE*Er + CdlE2*pow(Er,2)+ CdlE3*pow(Er,2));
+
+    const double Cdlp = Cdl*(1.0 + CdlE*E + CdlE2*pow(E,2)+ CdlE3*pow(E,2));
     double Itot_bound =bounds_val;//std::max(10*Cdlp*delta_E*omega/Nt,1.0);
     Itot0 =Cdlp*dE;
     Itot1 = Itot0;
@@ -261,6 +261,12 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
               E=dcv_et(E_start, E_reverse,tr,v, t1);
               dE=dcv_dEdt(tr,v, t1+0.5*dt);
               cap_E=E;
+              if (t1 > tr){
+                Cdl=Cdlinv;
+                CdlE=CdlEinv;
+                CdlE2=CdlE2inv;
+                CdlE3=CdlE3inv;
+               }
             }
             e_surface_fun bc(E,dE,cap_E,Cdl,CdlE,CdlE2,CdlE3,E0,Ru,k0,alpha,Itot0,u1n0,dt,gamma);
             boost::uintmax_t max_it = max_iterations;
@@ -271,7 +277,7 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
             Itot1=sol.first;
             bc.update_temporaries(Itot1);
           //  cout<<bc.residual(sol.first)<<"\n";
-            if (debug!=-1 && debug<=t1){
+            if (debug!=-1 && debug<t[n_out]){
               std::vector<vector<double>> diagnostic=NR_function_surface(bc, Itot1, Itot0, Itot_bound);
               cout<<Cdlp*(dt*dE-Ru*(Itot1-Itot0))<<" "<<gamma*(bc.u1n1-bc.u1n0)<<"\n";
               cout<<-Cdlp*Ru<<" "<<  dt <<" "<< gamma*bc.du1n1<<"\n";
@@ -280,7 +286,7 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
             u1n0 = bc.u1n1;
             t1 += dt;
         }
-        Itot[n_out] =Itot1;//(Itot1-Itot0)*(t[n_out]-t1+dt)/dt + Itot0;
+        Itot[n_out] =(Itot1-Itot0)*(t[n_out]-t1+dt)/dt + Itot0;
     }
     return py::cast(Itot);
 }

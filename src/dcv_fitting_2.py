@@ -107,6 +107,10 @@ param_bounds={
     'CdlE1': [-0.1,0.1],#0.000653657774506,
     'CdlE2': [-0.01,0.01],#0.000245772700637,
     'CdlE3': [-0.01,0.01],#1.10053945995e-06,
+    'Cdlinv': [0,10], #(capacitance parameters)
+    'CdlE1inv': [-5,5],#0.000653657774506,
+    'CdlE2inv': [-5,5],#0.000245772700637,
+    'CdlE3inv': [-5,5],#1.10053945995e-06,
     'gamma': [0.1*param_list["original_gamma"],100*param_list["original_gamma"]],
     'k_0': [0, 1e4], #(reaction rate s-1)
     'alpha': [0.4, 0.6],
@@ -134,7 +138,7 @@ plt.show()
 cyt.simulation_options["dispersion_bins"]=[16]
 cyt.simulation_options["GH_quadrature"]=True
 cyt.def_optim_list([ "E0_mean", "E0_std", "k_0","Ru","Cdl","CdlE1", "CdlE2", "CdlE3","gamma", "alpha"])
-norm_vals=[ "E_0", "k_0","Ru","Cdl","CdlE1", "CdlE2", "CdlE3","gamma", "alpha"]
+norm_vals=[ "E_0", "k_0","Ru","Cdl","CdlE1", "CdlE2", "CdlE3","Cdlinv","CdlE1inv", "CdlE2inv", "CdlE3inv","gamma", "alpha"]
 curr_best=[-0.12138673699417057, 5653.711865172047, 6.251920538521568e-07, 0.0005113312954312908, 0.032688180215297846, -0.0016959746570033296, -4.363761285119949e-05, 5.118104508670231, -0.2856860853954224, -0.012643633142239707, -0.0001955648458022985, 6.441193562150172e-12, 0.5250534731453991]
 blank_sub=[0.09306177584874675, 1.9344951154832872, 7.4238908166570345, 0.0001868507457614954, 0.03418077288539134, -0.003700461869470928, -8.222260002632709e-05, 1.8219980821049462, -0.4487186289315357, -0.007048236265024821, 0.00020170449845746674, 1.4283135211180592e-12, 0.5569545398118998]
 with_params=[-0.25819776867643385,  0.06004627245093131, 83951.6420075274, 6.251920538521568e-07, 0.0005113312954312908, 0.032688180215297846, -0.0016959746570033296, -4.363761285119949e-05, 5.118104508670231, -0.2856860853954224, -0.012643633142239707, -0.0001955648458022985, 2.0464993756449906e-10, 0.5250534731453991]
@@ -142,8 +146,8 @@ with_params_sub=[-0.25819776867643385,  0.06004627245093131, 83951.6420075274, 7
 
 plot_results=[current_results1,current_results1, current_results1-blank_current, current_results1-blank_current]
 vals=[curr_best,with_params, blank_sub,  with_params_sub]
-vals=[-0.22724866541126082, 0.06775741946664324, 100, 10.48267882705497, 0.0003891656168817575, 0.11518075211542111, 0.006116081631796888, 0.00015255858946039424, 3.15, -0.11518075211542111, -0.006116081631796888, -0.00015255858946039424, 5.501037311619498e-10, 0.468582417253183]
-vals=[-0.22724866541126082,  100, 5.48267882705497, 0.0003891656168817575, 0.21518075211542111, 0.0006116081631796888, 0.000015255858946039424,9.01037311619498e-10, 0.468582417253183]
+vals=[-0.22724866541126082, 100, 100000.48267882705497, 0.0003891656168817575, 0.11518075211542111, 0.006116081631796888, 0.00015255858946039424, 3.15, -0.11518075211542111, -0.006116081631796888, -0.00015255858946039424, 5.501037311619498e-10, 0.468582417253183]
+#vals=[-0.22724866541126082,  100, 100000.48267882705497, 0.0003891656168817575, -0.01, 0.0006116081631796888*0, 0.00000015255858946039424*0,9.01037311619498e-10, 0.468582417253183]
 cyt.nd_param.nd_param_dict["time_end"]=time_results[-1]
 
 #cyt.times()
@@ -151,7 +155,7 @@ print(len(cyt.time_vec))
 volts=cyt.define_voltages()
 cyt.simulation_options["numerical_method"]="pybamm"
 cyt.def_optim_list(norm_vals)
-k_idx=cyt.optim_list.index("Ru")
+k_idx=cyt.optim_list.index("CdlE2")
 orig_k=vals[k_idx]
 k_str=str(round(orig_k, 3))
 print("HELLO")
@@ -171,13 +175,14 @@ plt.xlabel("Ru")
 plt.ylabel("simulation time(secs)")
 plt.legend()
 plt.show()"""
-rs=[800,  1000, 10000, 100000]
+cyt.simulation_options["adaptive_ru"]=True
+rs=[ -0.001,-0.001, 0,  0.005]
 for i in range(0, len(rs)):
     plt.subplot(2, len(rs)//2, i+1)
     vals[k_idx]=rs[i]
     current_range=cyt.test_vals(vals, "timeseries")
 
-    plt.title("$R_u=10^"+str(int(np.log10(rs[i])))+"\Omega$")
+    #plt.title("$R_u=10^"+str(int(np.log10(rs[i])))+"\Omega$")
 
 
     #plt.show()
@@ -223,7 +228,7 @@ for i in range(0, len(rs)):
     #p2,=ax.plot(time_results, gradients[:, 0], label="dI", color="red", alpha=0.7)
     #p3,=ax.plot(time_results, gradients[:, 1], label="d$\\theta$", color="green", alpha=0.7)
     #p4,=ax.plot(time_results, gradients[:, 2], label="dE", color="purple", alpha=0.7, linestyle="--")
-    plt.legend(handles=[p1, p2], loc="lower left")
+    plt.legend(handles=[p2], loc="lower left")
 
 #plt.tight_layout()
 plt.show()
@@ -247,8 +252,8 @@ for i in range(0, len(cdls)):
         plt.ylabel("Nondim Current")
     plt.legend(loc="upper left")
     plt.title("Cdl="+str(orig_cdl*cdls[i])+"F")
-plt.show()"""
-"""for z in range(0, len(sfs)):
+plt.show()
+Wfor z in range(0, len(sfs)):
     param_list["sampling_freq"]=sfs[z]
     cyt=single_electron(None, param_list, simulation_options, other_values, param_bounds)
     cyt.def_optim_list(norm_vals)
@@ -308,7 +313,8 @@ cdl_vals=[0.0005113312954312908, 0.032688180215297846, -0.0016959746570033296, -
 cdl_params=["Cdl","CdlE1", "CdlE2", "CdlE3","Cdlinv","CdlE1inv", "CdlE2inv", "CdlE3inv"]
 for i in range(0, len(cdl_vals)):
     cyt.dim_dict[cdl_params[i]]=cdl_vals[i]
-cyt.def_optim_list([ "E_0", "k_0","Ru","Cdl","CdlE1", "CdlE2", "CdlE3","gamma", "alpha"])
+cyt.def_optim_list([ "E_0", "k_0","Ru","Cdl","CdlE1", "CdlE2", "Cdlinv","CdlE1inv", "CdlE2inv", "CdlE3inv","CdlE3","gamma", "alpha"])
+
 cyt.simulation_options["test"]=False
 cyt.simulation_options["label"]="cmaes"
 cyt.simulation_options["adaptive_ru"]=True

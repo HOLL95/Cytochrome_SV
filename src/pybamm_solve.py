@@ -25,7 +25,11 @@ class pybamm_solver:
         Er=E_t-(self.parameter_dict["Ru"]*current)
         ErE0=Er-self.parameter_dict["E_0"]
         alpha=self.parameter_dict["alpha"]
-        Cdlp=self.parameter_dict["Cdl"]*(1+self.parameter_dict["CdlE1"]*Er+self.parameter_dict["CdlE2"]*(Er**2)+self.parameter_dict["CdlE3"]*(Er**3))
+        if self.simulation_options["method"]=="dcv":
+            Cdlp=self.parameter_dict["Cdl"]*(1+self.parameter_dict["CdlE1"]*Er+self.parameter_dict["CdlE2"]*(Er**2)+self.parameter_dict["CdlE3"]*(Er**3))
+        else:
+            Cdlp=(pybamm.t <= self.parameter_dict["tr"]) *(self.parameter_dict["Cdl"]*(1+self.parameter_dict["CdlE1"]*Er+self.parameter_dict["CdlE2"]*(Er**2)+self.parameter_dict["CdlE3"]*(Er**3)))+\
+            (pybamm.t > self.parameter_dict["tr"]) *(self.parameter_dict["Cdlinv"]*(1+self.parameter_dict["CdlE1inv"]*Er+self.parameter_dict["CdlE2inv"]*(Er**2)+self.parameter_dict["CdlE3inv"]*(Er**3)))
 
         self.model.variables={"current":current, "theta":theta}
         d_thetadt=((1-theta)*self.parameter_dict["k_0"]*pybamm.exp((1-alpha)*ErE0))-(theta*self.parameter_dict["k_0"]*pybamm.exp((-alpha)*ErE0))
@@ -41,6 +45,7 @@ class pybamm_solver:
         disc.process_model(self.model)
         solver=pybamm.ScipySolver()
         solution=solver.solve(self.model, time_vec, inputs=self.pybam_val_dict)
+
         return solution["current"].entries
     def potential_fun(self):
         if self.simulation_options["method"]=="sinusoidal":

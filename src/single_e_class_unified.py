@@ -459,6 +459,7 @@ class single_electron:
             else:
                 self.simulation_options["numerical_method"]="Brent minimisation"
         if self.simulation_options["numerical_method"]=="Brent minimisation":
+            print("BRENT")
             solver=isolver_martin_brent.brent_current_solver
         elif self.simulation_options["numerical_method"]=="Newton-Raphson":
             solver=isolver_martin_NR.NR_current_solver
