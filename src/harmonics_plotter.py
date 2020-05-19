@@ -19,6 +19,7 @@ class harmonics:
         time_series=data
         f=np.fft.fftfreq(len(time_series), times[1]-times[0])
         Y=np.fft.fft(time_series)
+
         last_harm=(self.harmonics[-1]*self.input_frequency)
         frequencies=f[np.where((f>0) & (f<(last_harm+(0.5*self.input_frequency))))]
         top_hat=(copy.deepcopy(Y[0:len(frequencies)]))
@@ -31,13 +32,30 @@ class harmonics:
             filter_bit=(top_hat[freq_idx])
             harmonics[i,np.where((frequencies<(true_harm+(self.input_frequency*self.filter_val))) & (frequencies>true_harm-(self.input_frequency*self.filter_val)))]=func(filter_bit)
             harmonics[i,:]=((np.fft.ifft(harmonics[i,:])))
-        #plt.show()
+
         return harmonics
     def empty(self, arg):
         return arg
-    def inv_objective_fun(self, func, time_series):
-        obj_func=np.append(func(time_series),0)
-        time_domain=(np.fft.ifft(np.append(obj_func,np.flip(obj_func))))
+    def inv_objective_fun(self, time_series, dt=None,func=None):
+        func_not_right_length=False
+        if func!=None:
+            likelihood=func(time_series)
+            if len(likelihood)==(len(time_series)//2)-1:
+                likelihood=np.append(likelihood, [0, np.flip(likelihood)])
+            if len(likelihood)!=len(time_series):
+                func_not_right_length=True
+        if func==None or func_not_right_length==True:
+            L=len(time_series)
+            window=np.hanning(L)
+            #time_series=np.multiply(time_series, window)
+            f=np.fft.fftfreq(len(time_series), dt)
+            Y=np.fft.fft(time_series)
+            top_hat=copy.deepcopy(Y)
+            first_harm=(self.harmonics[0]*self.input_frequency)-(self.input_frequency*0.5)
+            last_harm=(self.harmonics[-1]*self.input_frequency)+(self.input_frequency*0.5)
+            Y[np.where((f<(first_harm-(self.input_frequency*self.filter_val))) & (f>last_harm+(self.input_frequency*self.filter_val)))]=0
+            likelihood=Y
+        time_domain=np.fft.ifft(likelihood)
         return time_domain
     def harmonic_selecter(self, ax, time_series, times, box=True, arg=np.real, line_label=None, alpha=1.0, extend=False):
         f=np.fft.fftfreq(len(time_series), times[1]-times[0])
@@ -79,6 +97,7 @@ class harmonics:
         ax[i].set_ylabel(str(self.harmonics[i]), rotation=0)
         plt.legend()
         plt.show()
+
     def harmonics_plus(self, title, method, times, **kwargs):
         plt.rcParams.update({'font.size': 12})
         large_plot_xaxis=times

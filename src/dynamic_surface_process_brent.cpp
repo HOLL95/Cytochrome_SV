@@ -177,113 +177,159 @@ std::vector<vector<double>> NR_function_surface(e_surface_fun &bc, double I_0, d
 
 
 py::object brent_current_solver(py::dict params, std::vector<double> t, std::string method, double debug=-1, double bounds_val=10) {
-    const double v=1;
-    const int digits_accuracy = std::numeric_limits<double>::digits;
-    const double max_iterations = 100;
-    double E, dE, cap_E;
-    std::vector<double> Itot(t.size(), 0);
-    const double k0 = get(params,std::string("k_0"),35.0);
-    const double alpha = get(params,std::string("alpha"),0.5);
-    const double gamma = get(params,std::string("gamma"),1.0);
-    const double E0 = get(params,std::string("E_0"),0.25);
-    const double Ru = get(params,std::string("Ru"),0.001);
-    double Cdl = get(params,std::string("Cdl"),0.0037);
-    double CdlE = get(params,std::string("CdlE1"),0.0);
-    double CdlE2 = get(params,std::string("CdlE2"),0.0);
-    double CdlE3 = get(params,std::string("CdlE3"),0.0);
-    const double E_start = get(params,std::string("E_start"),-10.0);
-    const double E_reverse = get(params,std::string("E_reverse"),10.0);
-    const double pi = boost::math::constants::pi<double>();
-    const double omega = get(params,std::string("nd_omega"),2*pi);
-    const double phase = get(params,std::string("phase"),0.0);
-    const double cap_phase = get(params,std::string("cap_phase"),0.0);
-    const double delta_E = get(params,std::string("d_E"),0.1);
-    const double sf= get(params,std::string("sampling_freq"),0.1);
-    double Cdlinv;
-    double CdlEinv;
-    double CdlE2inv;
-    double CdlE3inv;
-    double dt=t[1]-t[0];
-    if (sf<dt){
-      dt=sf;
-    }
-    double Itot0,Itot1;
-    double u1n0;
-    int input=-1; // 0 for ramped, 1 for sinusoidal, 2 for DCV
-    double t1 = 0.0;
-    u1n0 = 0.0;
-    double tr=E_reverse-E_start;
-    if ((method.compare("ramped"))==0){
-      input=0;
-    }
-    else if ((method.compare("sinusoidal"))==0){
-      input =1;
-    }
-    else if ((method.compare("dcv"))==0){
-      input =2;
-    }
-    else{
-      throw std::runtime_error("Input voltage method not defined");
-    }
-    if (input==0){
-      E = et(E_start, omega, phase,delta_E ,t1+dt);
-      dE = dEdt(omega, cap_phase,delta_E , t1+0.5*dt);
-    }
-    else if (input ==1){
-      E = c_et( E_start, E_reverse, tr, omega,  phase,  v,  delta_E, t1);
-      dE = c_dEdt(tr,  omega,  cap_phase,  v,  delta_E, t1+0.5*dt);
-    }
-    else if (input==2){
-      E=dcv_et(E_start, E_reverse,tr,v, t1);
-      dE=dcv_dEdt(tr,v, t1+0.5*dt);
+  const double v=1;
+  const int digits_accuracy = std::numeric_limits<double>::digits;
+  const double max_iterations = 100;
+  double E, dE, cap_E;
+  std::vector<double> Itot(t.size(), 0);
+  const double k0 = get(params,std::string("k_0"),35.0);
+  const double alpha = get(params,std::string("alpha"),0.5);
+  const double gamma = get(params,std::string("gamma"),1.0);
+  const double E0 = get(params,std::string("E_0"),0.25);
+  const double Ru = get(params,std::string("Ru"),0.001);
+  double Cdl = get(params,std::string("Cdl"),0.0037);
+  double CdlE = get(params,std::string("CdlE1"),0.0);
+  double CdlE2 = get(params,std::string("CdlE2"),0.0);
+  double CdlE3 = get(params,std::string("CdlE3"),0.0);
+  const double E_start = get(params,std::string("E_start"),-10.0);
+  const double E_reverse = get(params,std::string("E_reverse"),10.0);
+  const double pi = boost::math::constants::pi<double>();
+  const double omega = get(params,std::string("nd_omega"),2*pi);
+  const double phase = get(params,std::string("phase"),0.0);
+  const double cap_phase = get(params,std::string("cap_phase"),0.0);
+  const double delta_E = get(params,std::string("d_E"),0.1);
+  const double sf= get(params,std::string("sampling_freq"),0.1);
+  double Cdlinv;
+  double CdlEinv;
+  double CdlE2inv;
+  double CdlE3inv;
+  double dt=t[1]-t[0];
+  if (sf<dt){
+    dt=sf;
+  }
+  double Itot0,Itot1;
+  double u1n0;
+  int input=-1; // 0 for ramped, 1 for sinusoidal, 2 for DCV
+  double t1 = 0.0;
+  u1n0 = 1.0;
+  double tr=E_reverse-E_start;
+  if ((method.compare("ramped"))==0){
+    input=0;
+  }
+  else if ((method.compare("sinusoidal"))==0){
+    input =1;
+  }
+  else if ((method.compare("dcv"))==0){
+    input =2;
+  }
+  else{
+    throw std::runtime_error("Input voltage method not defined");
+  }
+  if (input==0){
+    E = et(E_start, omega, phase,delta_E ,t1+dt);
+    dE = dEdt(omega, cap_phase,delta_E , t1+0.5*dt);
+  }
+  else if (input ==1){
+    E = c_et( E_start, E_reverse, tr, omega,  phase,  v,  delta_E, t1);
+    dE = c_dEdt(tr,  omega,  cap_phase,  v,  delta_E, t1+0.5*dt);
+  }
+  else if (input==2){
+    E=dcv_et(E_start, E_reverse,tr,v, t1);
+    dE=dcv_dEdt(tr,v, t1+0.5*dt);
+    Cdlinv = get(params,std::string("Cdlinv"),0.0);
+    CdlEinv = get(params,std::string("CdlE1inv"),0.0);
+    CdlE2inv = get(params,std::string("CdlE2inv"),0.0);
+    CdlE3inv = get(params,std::string("CdlE3inv"),0.0);
 
-    }
-    //cout<<E<<" "<<dE<<" "<<" "<<Cdl<<" "<<CdlE<<" "<<CdlE2<<" "<<CdlE3<<" "<<E0<<" "<<Ru<<" "<<k0<<" "<<alpha<<" "<<Itot0<<" "<<u1n0<<" "<<dt<<" "<<gamma<<" dicts"<<"\n";
-    double Er=E-(Ru*Cdl*dE);
-    const double Cdlp = Cdl*(1.0 + CdlE*Er + CdlE2*pow(Er,2)+ CdlE3*pow(Er,2));
-    double Itot_bound =bounds_val;//std::max(10*Cdlp*delta_E*omega/Nt,1.0);
-    Itot0 =Cdlp*dE;
-    Itot1 = Itot0;
-    for (int n_out = 0; n_out < t.size(); n_out++) {
-        while (t1 < t[n_out]) {
-            Itot0 = Itot1;
-            if (input==1){
-              E = et(E_start, omega, phase,delta_E ,t1+dt);
-              dE = dEdt(omega, cap_phase,delta_E , t1+0.5*dt);
-              cap_E=et(E_start, omega, cap_phase,delta_E ,t1+dt);
+  }
+  //cout<<E<<" "<<dE<<" "<<" "<<Cdl<<" "<<CdlE<<" "<<CdlE2<<" "<<CdlE3<<" "<<E0<<" "<<Ru<<" "<<k0<<" "<<alpha<<" "<<Itot0<<" "<<u1n0<<" "<<dt<<" "<<gamma<<" dicts"<<"\n";
+  double Er=E-(Ru*Cdl*dE);
+  double error=1;
+  double desired_error=0.1;
+  const double Cdlp = Cdl*(1.0 + CdlE*Er + CdlE2*pow(Er,2)+ CdlE3*pow(Er,2));
+  double Itot_bound =bounds_val;//std::max(10*Cdlp*delta_E*omega/Nt,1.0);
+  Itot0 =Cdlp*dE;
+  Itot1 = Itot0;
+  int count=0;
+  std::vector<double> solution_vec(2, 0);
+  std::vector<double> dt_frac(2, 1);
+  dt_frac[0]=1;
+  dt_frac[1]=0.5;
+  int sol_len=solution_vec.size();
+  for (int n_out = 0; n_out < 3; n_out++) {
+    count=0;
+    error=1;
+    while (error>desired_error){
+      for (int q=0; q<sol_len; q++){
+            if (n_out!=0){
+              Itot1=Itot[n_out-1];
+              t1=t[n_out-1];
+            }else{
+              Itot1=Cdlp;
+              t1=0.0;
             }
-            else if (input ==0){
-              E = c_et( E_start, E_reverse, tr, omega,  phase,  v,  delta_E, t1);
-              dE = c_dEdt(tr,  omega,  cap_phase,  v,  delta_E, t1+0.5*dt);
-              cap_E= c_et( E_start, E_reverse, tr, omega,  cap_phase,  v,  delta_E, t1);
+
+            dt=dt*dt_frac[q];
+            while (t1<t[n_out] && count<100) {
+                Itot0 = Itot1;
+                if (input==1){
+                  E = et(E_start, omega, phase,delta_E ,t1+dt);
+                  dE = dEdt(omega, cap_phase,delta_E , t1+0.5*dt);
+                  cap_E=et(E_start, omega, cap_phase,delta_E ,t1+dt);
+                }
+                else if (input ==0){
+                  E = c_et( E_start, E_reverse, tr, omega,  phase,  v,  delta_E, t1+dt);
+                  dE = c_dEdt(tr,  omega,  cap_phase,  v,  delta_E,t1+0.5*dt);
+                  cap_E= c_et( E_start, E_reverse, tr, omega,  cap_phase,  v,  delta_E, t1+dt);
+                }
+                else if (input ==2){
+                  E=dcv_et(E_start, E_reverse,tr,v, t1+dt);
+                  dE=dcv_dEdt(tr,v, t1+0.5*dt);
+                  cap_E=E;
+                  if (t1 > tr){
+                    Cdl=Cdlinv;
+                    CdlE=CdlEinv;
+                    CdlE2=CdlE2inv;
+                    CdlE3=CdlE3inv;
+                   }
+                }
+                e_surface_fun bc(E,dE,cap_E,Cdl,CdlE,CdlE2,CdlE3,E0,Ru,k0,alpha,Itot0,u1n0,dt,gamma);
+                boost::uintmax_t max_it = max_iterations;
+                //Itot1 = boost::math::tools::newton_raphson_iterate(bc, Itot0,Itot0-Itot_bound,Itot0+Itot_bound, digits_accuracy, max_it);
+                std::pair <double, double> sol=boost::math::tools::brent_find_minima(bc,Itot0-Itot_bound,Itot0+Itot_bound, digits_accuracy, max_it);
+                Itot1=sol.first;
+                cout<<Itot1<<"\n";
+                bc.update_temporaries(Itot1);
+                u1n0 = bc.u1n1;
+                t1 += dt;
+                count+=1;
+                if (debug!=-1 && debug<=t1){
+                  std::vector<vector<double>> diagnostic=NR_function_surface(bc, Itot1, Itot0, Itot_bound);
+                  return py::cast(diagnostic);
+                }
+              }
+              solution_vec[q]=Itot1;////(Itot1-Itot0)*(t[n_out]-t1+dt)/dt + Itot0;
             }
-            else if (input ==2){
-              E=dcv_et(E_start, E_reverse,tr,v, t1);
-              dE=dcv_dEdt(tr,v, t1+0.5*dt);
-              cap_E=E;
+            error=abs(solution_vec[1]-solution_vec[0])/(dt*2);
+
+            //error=0.1;
+            if (error!=0){
+              cout<<"olddt="<<dt<<"\n";
+              dt=dt*0.9*(desired_error/error);
+              cout<<"new_dt="<<dt<<" Error ratio="<<(desired_error/error)<<" error="<<error<<" diff="<<error*dt<<"\n";
+            }else{
+              dt=dt*2;
             }
-            e_surface_fun bc(E,dE,cap_E,Cdl,CdlE,CdlE2,CdlE3,E0,Ru,k0,alpha,Itot0,u1n0,dt,gamma);
-            boost::uintmax_t max_it = max_iterations;
-            //Itot1 = boost::math::tools::newton_raphson_iterate(bc, Itot0,Itot0-Itot_bound,Itot0+Itot_bound, digits_accuracy, max_it);
-            std::pair <double, double> sol=boost::math::tools::brent_find_minima(bc,Itot0-Itot_bound,Itot0+Itot_bound, digits_accuracy, max_it);
-            //cout.precision(std::numeric_limits<double>::digits10);
-            ///if (max_it == max_iterations) throw std::runtime_error("non-linear solve for Itot[n+1] failed, max number of iterations reached");
-            Itot1=sol.first;
-            bc.update_temporaries(Itot1);
-          //  cout<<bc.residual(sol.first)<<"\n";
-            if (debug!=-1 && debug<=t1){
-              std::vector<vector<double>> diagnostic=NR_function_surface(bc, Itot1, Itot0, Itot_bound);
-              cout<<Cdlp*(dt*dE-Ru*(Itot1-Itot0))<<" "<<gamma*(bc.u1n1-bc.u1n0)<<"\n";
-              cout<<-Cdlp*Ru<<" "<<  dt <<" "<< gamma*bc.du1n1<<"\n";
-              return py::cast(diagnostic);
-            }
-            u1n0 = bc.u1n1;
-            t1 += dt;
+            cout<<"A1="<<solution_vec[1]<<" A2="<<solution_vec[0]<<" dt="<<dt*2<<" new_dt="<<dt<<"\n";
+          }
+          Itot[n_out]=solution_vec[1];
+
+          cout<<n_out<<" error"<<error<<" dt="<<dt<<"\n";
         }
-        Itot[n_out] =Itot1;//(Itot1-Itot0)*(t[n_out]-t1+dt)/dt + Itot0;
-    }
-    return py::cast(Itot);
-}
+        return py::cast(Itot);
+      }
+
+
 PYBIND11_MODULE(isolver_martin_brent, m) {
 	m.def("brent_current_solver", &brent_current_solver, "solve for I_tot using the brent minimisation method");
   m.def("c_et", &c_et, "Classical potential input");

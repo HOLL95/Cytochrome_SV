@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 from params_class import params
 from dispersion_class import dispersion
 from decimal import Decimal
+from pybamm_solve import pybamm_solver
 import copy
 import time
 import pickle
@@ -29,6 +30,7 @@ class single_electron:
             self.save_dict=save_dict
         else:
             self.file_init=False
+        simulation_options=self.options_checker(simulation_options)
         required_params=set(["E_0", "k_0", "alpha", "gamma", "Ru", "Cdl", "CdlE1","CdlE2","CdlE3", "E_start", \
                             "E_reverse", "omega", "phase", "d_E"])
         param_set=set(dim_parameter_dictionary.keys())
@@ -41,8 +43,8 @@ class single_electron:
             raise KeyError("Specify either phase only or a capacitance phase")
         if simulation_options["method"]=="ramped":
             dim_parameter_dictionary["v_nondim"]=True
+
         self.nd_param=params(dim_parameter_dictionary)
-        self.nd_param_dict=self.nd_param.nd_param_dict
         self.dim_dict=copy.deepcopy(dim_parameter_dictionary)
         self.simulation_options=simulation_options
         self.optim_list=self.simulation_options["optim_list"]
@@ -50,6 +52,7 @@ class single_electron:
         self.num_harmonics=len(self.harmonic_range)
         self.filter_val=other_values["filter_val"]
         self.bounds_val=other_values["bounds_val"]
+        self.count=0
 
         self.time_array=[]
         if self.simulation_options["experimental_fitting"]==True:
@@ -200,6 +203,65 @@ class single_electron:
         return 1
     def n_parameters(self):
         return len(self.optim_list)
+    def Armstrong_dcv_current(self, times, dcv_voltages):
+        T=(273+25)
+        F=96485.3328959
+        R=8.314459848
+        first_denom=(F**2*self.dim_dict["area"]*self.dim_dict["v"]*self.dim_dict["gamma"])/(R*T)
+        current=np.zeros(len(times))
+        for i in range(0, len(times)):
+            exponent=np.exp(F*(dcv_voltages[i]-self.dim_dict["E_0"])/(R*T))
+            current[i]=(exponent/(1+(exponent**2)))*first_denom
+        return current
+    def current_ode_sys(self, state_vars, time):
+        current, theta, potential=state_vars
+        if self.simulation_options["method"]=="sinusoidal":
+                Et=isolver_martin_brent.et(self.nd_param.nd_param_dict["E_start"],self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], self.nd_param.nd_param_dict["d_E"], time)
+                dEdt=isolver_martin_brent.dEdt(self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], self.nd_param.nd_param_dict["d_E"], time)
+        elif self.simulation_options["method"]=="ramped":
+                tr=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
+                Et=isolver_martin_brent.c_et(self.nd_param.nd_param_dict["E_start"], self.nd_param.nd_param_dict["E_reverse"], (self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]) ,self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], 1,self.nd_param.nd_param_dict["d_E"],time)
+                dEdt=isolver_martin_brent.c_dEdt(tr ,self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], 1,self.nd_param.nd_param_dict["d_E"],time)
+        elif self.simulation_options["method"]=="dcv":
+                tr=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
+                Et=isolver_martin_brent.dcv_et(self.nd_param.nd_param_dict["E_start"], self.nd_param.nd_param_dict["E_reverse"], (self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]) , 1,time)
+                dEdt=isolver_martin_brent.dcv_dEdt(tr,1,time)
+        Er=Et-(self.nd_param.nd_param_dict["Ru"]*current)
+        ErE0=Er-self.nd_param.nd_param_dict["E_0"]
+        alpha=self.nd_param.nd_param_dict["alpha"]
+        self.Cdlp=self.nd_param.nd_param_dict["Cdl"]*(1+self.nd_param.nd_param_dict["CdlE1"]*Er+self.nd_param.nd_param_dict["CdlE2"]*(Er**2)+self.nd_param.nd_param_dict["CdlE3"]*(Er**3))
+        d_thetadt=((1-theta)*self.nd_param.nd_param_dict["k_0"]*np.exp((1-alpha)*ErE0))-(theta*self.nd_param.nd_param_dict["k_0"]*np.exp((-alpha)*ErE0))
+        dIdt=(dEdt-(current/self.Cdlp)+self.nd_param.nd_param_dict["gamma"]*d_thetadt*(1/self.Cdlp))/self.nd_param.nd_param_dict["Ru"]
+        f=[dIdt, d_thetadt, dEdt]
+        return f
+    def system_jacobian(self, state_vars, time):
+        current, theta, potential=state_vars
+        if self.simulation_options["method"]=="sinusoidal":
+                Et=isolver_martin_brent.et(self.nd_param.nd_param_dict["E_start"],self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], self.nd_param.nd_param_dict["d_E"], time)
+                dEdt=isolver_martin_brent.dEdt(self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], self.nd_param.nd_param_dict["d_E"], time)
+        elif self.simulation_options["method"]=="ramped":
+                tr=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
+                Et=isolver_martin_brent.c_et(self.nd_param.nd_param_dict["E_start"], self.nd_param.nd_param_dict["E_reverse"], (self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]) ,self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], 1,self.nd_param.nd_param_dict["d_E"],time)
+                dEdt=isolver_martin_brent.c_dEdt(tr ,self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], 1,self.nd_param.nd_param_dict["d_E"],time)
+        elif self.simulation_options["method"]=="dcv":
+                tr=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
+                Et=isolver_martin_brent.dcv_et(self.nd_param.nd_param_dict["E_start"], self.nd_param.nd_param_dict["E_reverse"], (self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]) , 1,time)
+                dEdt=isolver_martin_brent.dcv_dEdt(tr,1,time)
+        Er=Et-(self.nd_param.nd_param_dict["Ru"]*current)
+        ErE0=Er-self.nd_param.nd_param_dict["E_0"]
+        alpha=self.nd_param.nd_param_dict["alpha"]
+        exp11=self.nd_param.nd_param_dict["k_0"]*np.exp((1-alpha)*ErE0)
+        exp12=self.nd_param.nd_param_dict["k_0"]*np.exp((-alpha)*ErE0)
+        Cdlp=self.nd_param.nd_param_dict["Cdl"]*(1+self.nd_param.nd_param_dict["CdlE1"]*Er+self.nd_param.nd_param_dict["CdlE2"]*(Er**2)+self.nd_param.nd_param_dict["CdlE3"]*(Er**3))
+        jacobian=np.zeros((2, 2))
+        dtheta_dI=(-(1-theta)*(1-alpha)*exp11*self.nd_param.nd_param_dict["Ru"])-(theta*alpha*self.nd_param.nd_param_dict["Ru"]*exp12)
+        #dtheta_dE=((1-theta)*(1-alpha)*exp11)+(theta*alpha*exp12)
+        dtheta_dtheta=-exp11-exp12
+        jacobian[1, :]=[dtheta_dI, dtheta_dtheta]
+        jacobian[0, 0]=(-1/(self.nd_param.nd_param_dict["Ru"]*Cdlp))+(self.nd_param.nd_param_dict["gamma"]/Cdlp*self.nd_param.nd_param_dict["Ru"])*dtheta_dI
+        #jacobian[0, 1]=(self.nd_param.nd_param_dict["gamma"]/Cdlp*self.nd_param.nd_param_dict["Ru"])*dtheta_dE
+        jacobian[0, 1]=(self.nd_param.nd_param_dict["gamma"]/Cdlp*self.nd_param.nd_param_dict["Ru"])*dtheta_dtheta
+        return jacobian
     def define_voltages(self, transient=False):
         voltages=np.zeros(len(self.time_vec))
         if self.simulation_options["method"]=="sinusoidal":
@@ -254,7 +316,7 @@ class single_electron:
             results[freq_idx_1]=likelihood_1
             results[freq_idx_2]=likelihood_2
         comp_results=np.append((np.real(results)), np.imag(results))
-        return (comp_results)
+        return comp_results
     def abs_transform(self, data):
         window=np.hanning(len(data))
         hanning_transform=np.multiply(window, data)
@@ -320,41 +382,49 @@ class single_electron:
         self.simulation_options["likelihood"]=likelihood
         self.simulation_options["label"]="MCMC"
         self.simulation_options["test"]=test
-        results=self.simulate(parameters, self.frequencies)
-        if self.n_outputs()==1:
-            if sum(results)==0:
-                raise ValueError("Not simulated, check options")
-        elif self.n_outputs()==1:
-            if sum(results[:,0])==0 or sum(results[:,1])==0:
-                raise ValueError("Not simulated, check options")
-        self.simulation_options["likelihood"]=orig_likelihood
-        self.simulation_options["label"]=orig_label
-        self.simulation_options["test"]=orig_test
-        return results
+        if self.simulation_options["numerical_debugging"]==False:
+            results=self.simulate(parameters, self.frequencies)
+            if self.n_outputs()==1:
+                if sum(results)==0:
+                    raise ValueError("Not simulated, check options")
+            elif self.n_outputs()==1:
+                if sum(results[:,0])==0 or sum(results[:,1])==0:
+                    raise ValueError("Not simulated, check options")
+            self.simulation_options["likelihood"]=orig_likelihood
+            self.simulation_options["label"]=orig_label
+            self.simulation_options["test"]=orig_test
+            return results
+        else:
+            current_range, gradient=self.simulate(parameters, self.frequencies)
+            self.simulation_options["likelihood"]=orig_likelihood
+            self.simulation_options["label"]=orig_label
+            self.simulation_options["test"]=orig_test
+            return current_range, gradient
     def paralell_disperse(self, solver):
         time_series=np.zeros(len(self.time_vec))
         if "GH_quadrature" in self.simulation_options:
             if self.simulation_options["GH_quadrature"]==True:
-                sim_params, values, weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict), self.other_values["GH_dict"])
+                sim_params, self.values, self.weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict), self.other_values["GH_dict"])
         else:
-                sim_params, values, weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict))
+                sim_params, self.values, self.weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict))
 
-        for i in range(0, len(weights)):
+        for i in range(0, len(self.weights)):
             for j in range(0, len(sim_params)):
-                self.nd_param_dict[sim_params[j]]=values[i][j]
-            time_series_current=solver(self.nd_param_dict, self.time_vec,self.simulation_options["method"], -1, self.bounds_val)
-            time_series=np.add(time_series, np.multiply(time_series_current, np.prod(weights[i])))
+                self.nd_param.nd_param_dict[sim_params[j]]=self.values[i][j]
+            time_series_current=solver(self.nd_param.nd_param_dict, self.time_vec,self.simulation_options["method"], -1, self.bounds_val)
+            time_series=np.add(time_series, np.multiply(time_series_current, np.prod(self.weights[i])))
         return time_series
     def numerical_plots(self, solver):
         self.debug_time=self.simulation_options["numerical_debugging"]
-        time_series=solver(self.nd_param_dict, self.time_vec,self.simulation_options["method"], self.debug_time, self.bounds_val)
+        time_series=solver(self.nd_param.nd_param_dict, self.time_vec,self.simulation_options["method"], self.debug_time, self.bounds_val)
+        current=time_series[0]
         residual=time_series[1]
         residual_gradient=time_series[2]
+
         #plt.subplot(1,2,1)
         #plt.semilogy(current, np.abs(residual))
-        Nt=self.time_vec[-1]/self.nd_param.nd_param_dict["sampling_freq"]
-        bounds_val=max(10*self.nd_param.nd_param_dict["Cdl"]*self.nd_param.nd_param_dict["d_E"]*self.nd_param.nd_param_dict["nd_omega"]/Nt,1.0)
-        middle_index=(len(time_series[0])-1)/2 + 1
+        bounds_val=self.bounds_val
+        middle_index=(len(time_series[0])-1)//2 + 1
         I0=residual[middle_index]
         if  self.simulation_options["numerical_method"]=="Newton-Raphson":
             plt.subplot(1,2,1)
@@ -368,8 +438,7 @@ class single_electron:
             plt.plot(current, ((residual_gradient)))
             plt.show()
         else:
-            plt.plot(current, residual, label=round(self.debug_time, 4))
-            plt.show()
+            return current, residual
     def simulate(self,parameters, frequencies):
         if len(parameters)!= len(self.optim_list):
             print(self.optim_list)
@@ -381,27 +450,42 @@ class single_electron:
             normed_params=copy.deepcopy(parameters)
         for i in range(0, len(self.optim_list)):
             self.dim_dict[self.optim_list[i]]=normed_params[i]
-        if "phase_only" in self.simulation_options and self.simulation_options["phase_only"]==True:
+        if self.simulation_options["phase_only"]==True:
             self.dim_dict["cap_phase"]=self.dim_dict["phase"]
         self.nd_param=params(self.dim_dict)
-        self.nd_param_dict=self.nd_param.nd_param_dict
+        if self.simulation_options["adaptive_ru"]==True:
+            if self.dim_dict["Ru"]>1000:
+                self.simulation_options["numerical_method"]="pybamm"
+            else:
+                self.simulation_options["numerical_method"]="Brent minimisation"
         if self.simulation_options["numerical_method"]=="Brent minimisation":
             solver=isolver_martin_brent.brent_current_solver
         elif self.simulation_options["numerical_method"]=="Newton-Raphson":
             solver=isolver_martin_NR.NR_current_solver
             if self.simulation_options["method"]=="dcv":
                 raise ValueError("Newton-Raphson dcv simulation not implemented")
+        elif self.simulation_options["numerical_method"]=="pybamm":
+            if "tr" not in self.dim_dict:
+                self.dim_dict["tr"]=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
+                self.nd_param=params(self.dim_dict)
+            try:
+                solver=pybamm_sol.simulate
+            except:
+                pybamm_sol=pybamm_solver(self)
+                solver=pybamm_sol.simulate
         else:
             raise ValueError('Numerical method not defined')
         start=time.time()
         if self.simulation_options["numerical_debugging"]!=False:
-            self.numerical_plots(solver)
+            current_range, gradient=self.numerical_plots(solver)
+            return current_range, gradient
         else:
             if self.simulation_options["dispersion"]==True:
                 time_series=self.paralell_disperse(solver)
             else:
-                time_series=solver(self.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val)
+                time_series=solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val)
         time_series=np.array(time_series)
+        self.count+=1
         if self.simulation_options["no_transient"]!=False:
             time_series=time_series[self.time_idx]
 
@@ -409,12 +493,13 @@ class single_electron:
         if self.simulation_options["likelihood"]=='fourier':
             filtered=self.top_hat_filter(time_series)
             if (self.simulation_options["test"]==True):
-                print(list(normed_params))
-                self.variable_returner()
-                plt.plot(self.secret_data_fourier, label="data")
-                plt.plot(filtered , alpha=0.7, label="numerical")
-                plt.legend()
-                plt.show()
+                if self.count%500==0:
+                    print(list(normed_params))
+                    self.variable_returner()
+                    plt.plot(self.secret_data_fourier, label="data")
+                    plt.plot(filtered , alpha=0.7, label="numerical")
+                    plt.legend()
+                    plt.show()
             if "multi_output" in self.simulation_options:
                 if self.simulation_options["multi_output"]==True:
                     return np.column_stack((np.real(filtered), np.imag(filtered)))
@@ -437,6 +522,28 @@ class single_electron:
                     plt.plot(self.time_vec[self.time_idx], self.secret_data_time_series)
                     plt.show()
             return (time_series)
+    def options_checker(self, simulation_options):
+        if "no_transient" not in simulation_options:
+            simulation_options["no_transient"]=False
+        if "numerical_debugging" not in simulation_options:
+            simulation_options["numerical_debugging"]=False
+        if "experimental_fitting" not in simulation_options:
+            raise KeyError("Experimental fitting option not found - please define")
+        if "test" not in simulation_options:
+            simulation_options["test"]=False
+        if "method" not in simulation_options:
+            raise KeyError("Please define a simulation method")
+        if "phase_only" not in simulation_options:
+            simulation_options["phase_only"]=False
+        if "likelihood" not in simulation_options:
+            raise KeyError("Please define a likelihood/objective - timeseries or fourier domain")
+        if "numerical_method" not in simulation_options:
+            simulation_options["numerical_method"]="Brent minimisation"
+        if "label" not in simulation_options:
+            simulation_options["label"]="MCMC"
+        if "adaptive_ru" not in simulation_options:
+            simulation_options["adaptive_ru"]=False
+        return simulation_options
 class paralell_class:
     def __init__(self, params, times, method, bounds, solver):
         self.params=params
