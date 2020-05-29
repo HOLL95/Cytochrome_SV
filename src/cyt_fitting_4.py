@@ -60,11 +60,11 @@ for i in range(0, len(rs)):
         'sampling_freq' : (1.0/200),
         'phase' : 3*(math.pi/2),
         "time_end": -1,
-        'num_peaks': 200
+        'num_peaks': 40
     }
     solver_list=["Bisect", "Brent minimisation", "Newton-Raphson", "inverted"]
     likelihood_options=["timeseries", "fourier"]
-    time_start=50/(param_list["omega"])
+    time_start=1/(param_list["omega"])
     simulation_options={
         "no_transient":time_start,
         "numerical_debugging": False,

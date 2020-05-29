@@ -446,7 +446,6 @@ class single_electron:
             normed_params=self.change_norm_group(parameters, "un_norm")
         else:
             normed_params=copy.deepcopy(parameters)
-        print(normed_params)
         for i in range(0, len(self.optim_list)):
             self.dim_dict[self.optim_list[i]]=normed_params[i]
         if self.simulation_options["phase_only"]==True:
@@ -464,6 +463,7 @@ class single_electron:
             if self.simulation_options["method"]=="dcv":
                 raise ValueError("Newton-Raphson dcv simulation not implemented")
         elif self.simulation_options["numerical_method"]=="pybamm":
+            print(self.nd_param.nd_param_dict["nd_omega"])
             try:
                 solver=pybamm_sol.simulate
             except:

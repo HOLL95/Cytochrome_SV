@@ -148,7 +148,9 @@ with_params_sub=[-0.25819776867643385,  0.06004627245093131, 83951.6420075274, 7
 plot_results=[current_results1,current_results1, current_results1-blank_current, current_results1-blank_current]
 vals=[curr_best,with_params, blank_sub,  with_params_sub]
 vals=[-0.22724866541126082, 100, 500000.48267882705497, 0.0003, 0.0011518075211542111, 0.006116081631796888, 0*0.00015255858946039424,  5.501037311619498e-10, 0.468582417253183]
-vals=[-2.80434144e-01,  5.78481689e+03,  1.86100275e+04,  8.00400924e-03,3.11338864e-03*0,  1.28475460e-03*0,  5.63547538e-04*0,  7.25200293e-10,5.96693413e-01]
+vals=[-0.3367677500580231, 1002.1284484605364, 143313.21902538714, 0.0005099383043494805, 0.0009857312929298142, -0.0009950489357751454, 1.1510742943729923e-05, 4.320095586243804e-10, 0.5908341943807218]
+
+
 
 #vals=[-0.22724866541126082,  100, 100000.48267882705497, 0.0003891656168817575, -0.01, 0.0006116081631796888*0, 0.00000015255858946039424*0,9.01037311619498e-10, 0.468582417253183]
 cyt.nd_param.nd_param_dict["time_end"]=time_results[-1]
@@ -158,7 +160,11 @@ print(len(cyt.time_vec))
 volts=cyt.define_voltages()
 cyt.simulation_options["numerical_method"]="pybamm"
 cyt.def_optim_list(norm_vals)
+runs=100
+run_series=np.zeros(runs)
+
 test=cyt.test_vals(vals, "timeseries")
+
 w0 = [test[0],0, voltage_results[0]]
 abserr = 1.0e-8
 relerr = 1.0e-6
@@ -171,7 +177,8 @@ adaptive_current=wsol[:,0]
 adaptive_potential=wsol[:,2]
 adaptive_theta=wsol[:, 1]
 plt.plot(cyt.time_vec, test)
-#plt.plot(time_results, adaptive_theta)
+plt.plot(time_results, adaptive_current)
+plt.plot(time_results, current_results)
 plt.show()
 k_idx=cyt.optim_list.index("CdlE2")
 orig_k=vals[k_idx]

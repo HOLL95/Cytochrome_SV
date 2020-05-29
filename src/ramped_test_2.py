@@ -25,7 +25,6 @@ for j in range(1, 4):
     dec_amount=1
     for file in files:
         if scan in file and freq in file:
-
             if "current" in file:
                 current_data=np.loadtxt(data_loc+"/"+file)
             elif "voltage" in file:
@@ -69,8 +68,8 @@ for j in range(1, 4):
             "alpha_mean":0.5,
             "alpha_std":1e-3,
             'sampling_freq' : (1.0/400),
-            'phase' :0,
-            "time_end": None,
+            'phase' :0.1,
+            "time_end": -1,
             'num_peaks': 30,
         }
         solver_list=["Bisect", "Brent minimisation", "Newton-Raphson", "inverted"]
@@ -129,6 +128,7 @@ for j in range(1, 4):
         current_results=cyt.other_values["experiment_current"]
         voltage_results=cyt.other_values["experiment_voltage"]
         voltages=cyt.define_voltages(transient=True)
+        cyt.simulation_options["numerical_method"]="pybamm"
         test=cyt.test_vals([], "timeseries")
         #cyt.simulation_options["adaptive_ru"]=True
         #test2=cyt.test_vals([], "timeseries")
@@ -148,7 +148,7 @@ for j in range(1, 4):
         adaptive_theta=wsol[:, 1]
         cyt.nd_param.nd_param_dict["time_end"]=time_results[-1]
         cyt.times()
-        cyt.simulation_options["numerical_method"]="pybamm"
+
         plt.plot(time_results, adaptive_current, alpha=0.7, label=str(rs[q])+"$ \\Omega$")
         plt.xlabel("nondim time")
         plt.ylabel("nondim current")

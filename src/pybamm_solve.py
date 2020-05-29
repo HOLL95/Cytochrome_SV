@@ -10,7 +10,7 @@ class pybamm_solver:
         self.parameter_dict={}
         self.pybam_val_dict={}
         self.simulation_options=e_class.simulation_options
-        self.dim_keys=self.dim_dict.keys()
+        self.dim_keys=self.nd_dict.keys()
         self.time=e_class.time_vec
         for key in self.dim_keys:
             self.parameter_dict[key]=pybamm.InputParameter(key)
@@ -23,9 +23,9 @@ class pybamm_solver:
             E_t = self.parameter_dict["E_start"]+ \
             (pybamm.t <= self.parameter_dict["tr"]) * Edc_forward + \
             (pybamm.t > self.parameter_dict["tr"]) * Edc_backwards
-        elif self.simualtion_options["method"]=="sinusoidal":
+        elif self.simulation_options["method"]=="sinusoidal":
             E_t=self.parameter_dict["E_start"]+self.parameter_dict["d_E"]+(self.parameter_dict["d_E"]*pybamm.sin((self.parameter_dict["nd_omega"]*pybamm.t)+self.parameter_dict["phase"]))
-        elif self.simualtion_options["method"]=="ramped":
+        elif self.simulation_options["method"]=="ramped":
             Edc_forward = pybamm.t
             Edc_backwards = -(pybamm.t - 2*self.parameter_dict["tr"])
             E_t = self.parameter_dict["E_start"]+ \
@@ -45,21 +45,18 @@ class pybamm_solver:
         d_thetadt=((1-self.theta)*self.parameter_dict["k_0"]*pybamm.exp((1-alpha)*ErE0))-(self.theta*self.parameter_dict["k_0"]*pybamm.exp((-alpha)*ErE0))
         dIdt=(E_t.diff(pybamm.t)-(self.current/Cdlp)+self.parameter_dict["gamma"]*d_thetadt*(1/Cdlp))/self.parameter_dict["Ru"]
         self.model.rhs={self.current:dIdt, self.theta:d_thetadt}
-
+        self.disc=pybamm.Discretisation()
+        self.model.initial_conditions={self.theta:pybamm.Scalar(0), self.current:pybamm.Scalar(0)}
+        self.disc.process_model(self.model)
+        if self.simulation_options["method"]!="dcv":
+            self.solver=pybamm.CasadiSolver(mode="fast")
+        else:
+            self.solver=pybamm.ScipySolver()
     def simulate(self, nd_param_dict,time_vec ,*args):
+        print("Yes, this is pybamm")
         for key in self.dim_keys:
             self.pybam_val_dict[key]=nd_param_dict[key]
-        self.model.initial_conditions={self.theta:pybamm.Scalar(0), self.current:pybamm.Scalar(0)}
+        solution=self.solver.solve(self.model, time_vec, inputs=self.pybam_val_dict)
+        sol=solution["current"].entries
 
-        disc=pybamm.Discretisation()
-        disc.process_model(self.model)
-        if self.simulation_options["method"]!="dcv":
-            solver=pybamm.CasadiSolver(mode="fast")
-        else:
-            solver=pybamm.ScipySolver()
-        try:
-            solution=solver.solve(self.model, time_vec, inputs=self.pybam_val_dict)
-            sol=solution["current"].entries
-        except:
-            sol=np.zeros(len(time_vec))
         return sol
