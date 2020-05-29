@@ -198,16 +198,18 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
     const double phase = get(params,std::string("phase"),0.0);
     const double cap_phase = get(params,std::string("cap_phase"),0.0);
     const double delta_E = get(params,std::string("d_E"),0.1);
+    const double sf= get(params,std::string("sampling_freq"),0.1);
     double Cdlinv;
     double CdlEinv;
     double CdlE2inv;
     double CdlE3inv;
-    const double dt=  t[1]-t[0];
+    const double dt=  min(t[1]-t[0], sf);
     double Itot0,Itot1;
     double u1n0;
     int input=-1; // 0 for ramped, 1 for sinusoidal, 2 for DCV
     double t1 = 0.0;
     u1n0 = 1.0;
+
     double tr=E_reverse-E_start;
     if ((method.compare("ramped"))==0){
       input=0;

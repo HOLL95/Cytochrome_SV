@@ -66,7 +66,7 @@ for harmonic in range(3, 7):
         "alpha_std":1e-3,
         'sampling_freq' : (1.0/400),
         'phase' :0.1,
-        "time_end": None,
+        "time_end": -1,
         'num_peaks': 30,
     }
     solver_list=["Bisect", "Brent minimisation", "Newton-Raphson", "inverted"]
@@ -193,11 +193,13 @@ for harmonic in range(3, 7):
     #values=[[-0.2689898442882075, 0.1464604686665382, 45.27669426676901, 143.7146851754486, 0.0009043681474193589, 0.015041808481931207, 0.0005136942641310593, 5.116896389239807e-10, 8.940952127189066, 5.47854765415177, 5.804140291549392, 0.599999948777021]]
     #values=[[-0.34907222078847766, 0.16728103291804883, 36.20766537971544, 309.6008045093056, 0.0004684603907108233, -0.044714993569560824, -0.0003666268602918951, 1.7016016387164703e-10, 8.940709137470366, 1.570796326795193, 5.108518361948413, 0.5999999999999984]]
     #values=[[-0.3046986975646577, 0.1692280773575256, 59.16536815195476, 350.99885744498613, 0.00015306443130899493, 0.020370243736069882, 0.0013754384753472126, 1.8517396403606723e-10, 8.940944195940126, 5.055745799391211, 5.414311229328655, 0.5999999984388575]]
-    values=[[-0.23316743616752747, 3.918646030384116e-05, 125.32922208435807, 90.19806606006952, 0.0002308962063433851, -0.03321102983786629, -0.00044615696059807815, 2.1474804559923774e-11, 8.940960632790196, 3.6013722357683, 4.9024678072287475, 0.47377445163491094]]
+    values=[[-0.23316743616752747, 3.918646030384116e-05, 125.32922208435807, 9000.19806606006952, 0.0002308962063433851, -0.03321102983786629, -0.00044615696059807815, 2.1474804559923774e-11, 8.940960632790196, 3.6013722357683, 4.9024678072287475, 0.47377445163491094]]
     #cyt.def_optim_list(["E0_mean", "E0_std","k_0","Ru", "gamma", "alpha", "phase"])
     #cyt.dim_dict["Cdl"]=0
     cyt.def_optim_list(["E0_mean", "E0_std","k_0","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","cap_phase","phase", "alpha"])
-    for h in range(0, len(values)):
+    cyt.simulation_options["numerical_method"]="Brent minimisation"
+
+    """for h in range(0, len(values)):
         test=cyt.test_vals(values[h], "fourier")
         true_signal=cyt.test_vals(values[h], "timeseries")
         data_harmonics=harms.generate_harmonics(time_results,(current_results))
@@ -220,15 +222,29 @@ for harmonic in range(3, 7):
             ax1=ax.twinx()
             ax1.set_ylabel(other_values["harmonic_range"][i], rotation=0)
             ax1.set_yticks([])
-    plt.show()
-    plt.plot(time_results, true_signal)
-    plt.plot(time_results, current_results, alpha=0.7)
+    plt.show()"""
+    abserr = 1.0e-8
+    relerr = 1.0e-6
+    stoptime = time_results[-1]
+    numpoints = len(current_results)
+
+    w0 = [current_results[0],0, voltage_results[0]]
+
+    # Call the ODE solver.
+    wsol = odeint(cyt.current_ode_sys, w0, time_results,
+                  atol=abserr, rtol=relerr)
+
+    adaptive_current=wsol[:,0]
+    adaptive_potential=wsol[:,2]
+    adaptive_theta=wsol[:, 1]#cyt.calc_theta(wsol[:,0])
+    true_signal=cyt.test_vals(values[h], "timeseries")
+    plt.plot(voltage_results, true_signal)
+    plt.plot(voltage_results, adaptive_current, alpha=0.7)
     plt.show()
     true_data=current_results
     fourier_arg=cyt.top_hat_filter(true_data)
-    syn_fourier=cyt.test_vals(values[0], "fourier")
-    plt.plot(syn_fourier)
-    plt.plot(fourier_arg)
+    plt.plot(time_results, true_signal)
+    plt.plot(time_results, voltage_results)
     plt.show()
     #cyt.def_optim_list(["Cdl","CdlE1", "CdlE2","omega","cap_phase"])
     #cyt.dim_dict["gamma"]=0

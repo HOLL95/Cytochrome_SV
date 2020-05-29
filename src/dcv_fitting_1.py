@@ -68,7 +68,7 @@ param_list={
     "cap_phase":0,
     "alpha_mean":0.5,
     "alpha_std":1e-3,
-    'sampling_freq' : (1.0/200),
+    'sampling_freq' : (1.0/2000),
     'phase' :0.1,
     "time_end": -1,
     'num_peaks': 30,
@@ -102,11 +102,11 @@ other_values={
 param_bounds={
     'E_0':[-0.3,-0.1],
     'omega':[0.95*param_list['omega'],1.05*param_list['omega']],#8.88480830076,  #    (frequency Hz)
-    'Ru': [1e4, 5e5],  #     (uncompensated resistance ohms)
+    'Ru': [0, 1e6],  #     (uncompensated resistance ohms)
     'Cdl': [0,1e-3], #(capacitance parameters)
-    'CdlE1': [-1e-3,1e-3],#0.000653657774506,
-    'CdlE2':[-1e-3,1e-3],#0.000245772700637,
-    'CdlE3': [-1e-3,1e-3],#1.10053945995e-06,
+    'CdlE1': [-0.1,0.1],#0.000653657774506,
+    'CdlE2': [-0.01,0.01],#0.000245772700637,
+    'CdlE3': [-0.01,0.01],#1.10053945995e-06,
     'Cdlinv': [0,10], #(capacitance parameters)
     'CdlE1inv': [-5,5],#0.000653657774506,
     'CdlE2inv': [-5,5],#0.000245772700637,
@@ -132,9 +132,8 @@ voltage_results=cyt.other_values["experiment_voltage"]
 plt.plot(voltage_results, current_results)
 plt.show()
 volts=cyt.define_voltages()
-plt.plot(time_results, volts, "o")
-plt.plot(time_results, voltage_results, "o")
-plt.axvline(cyt.nd_param.nd_param_dict["E_reverse"]-cyt.nd_param.nd_param_dict["E_start"])
+plt.plot(volts)
+plt.plot(voltage_results)
 plt.show()
 cyt.simulation_options["dispersion_bins"]=[16]
 cyt.simulation_options["GH_quadrature"]=True
@@ -147,36 +146,31 @@ with_params_sub=[-0.25819776867643385,  0.06004627245093131, 83951.6420075274, 7
 
 plot_results=[current_results1,current_results1, current_results1-blank_current, current_results1-blank_current]
 vals=[curr_best,with_params, blank_sub,  with_params_sub]
-vals=[-0.22724866541126082, 100, 500000.48267882705497, 0.0003, 0.0011518075211542111, 0.006116081631796888, 0*0.00015255858946039424,  5.501037311619498e-10, 0.468582417253183]
-vals=[-2.80434144e-01,  5.78481689e+03,  1.86100275e+04,  8.00400924e-03,3.11338864e-03*0,  1.28475460e-03*0,  5.63547538e-04*0,  7.25200293e-10,5.96693413e-01]
-
-#vals=[-0.22724866541126082,  100, 100000.48267882705497, 0.0003891656168817575, -0.01, 0.0006116081631796888*0, 0.00000015255858946039424*0,9.01037311619498e-10, 0.468582417253183]
+vals=[-0.22724866541126082, 100, 100000.48267882705497, 0.0003891656168817575, 0.11518075211542111, 0.006116081631796888, 0.00015255858946039424, 3.15, -0.11518075211542111, -0.006116081631796888, -0.00015255858946039424, 5.501037311619498e-10, 0.468582417253183]
+vals=[-0.1648938033455009, 4809.445600019552, 125414.52863739766, 0.00013568578291782692, -0.09657056694230196, 0.009999988637986899, 5.656008537266864, -4.615626112291761, 3.378462098054783, 1.1195598211208075, 0.0005461800460546118, 8.64481359801844e-10, 0.5954327486818911]
+vals=[-0.22724866541126082,  100, 100000.48267882705497, 0.0003891656168817575, -0.01, 0.0006116081631796888*0, 0.00000015255858946039424*0,9.01037311619498e-10, 0.468582417253183]
 cyt.nd_param.nd_param_dict["time_end"]=time_results[-1]
+cyt.def_optim_list([ "E_0", "k_0","Ru","Cdl","CdlE1", "CdlE2", "CdlE3","gamma", "alpha"])
+vals=[-0.1648938033455009, 4809.445600019552, 125414.52863739766, 0.00013568578291782692, -0.09657056694230196, 0.009999988637986899, 8.64481359801844e-10, 0.5954327486818911]
+
+test=cyt.test_vals(vals, "timeseries")
+plt.plot(current_results)
+plt.plot(test)
+plt.show()
 
 #cyt.times()
 print(len(cyt.time_vec))
 volts=cyt.define_voltages()
 cyt.simulation_options["numerical_method"]="pybamm"
 cyt.def_optim_list(norm_vals)
-test=cyt.test_vals(vals, "timeseries")
-w0 = [test[0],0, voltage_results[0]]
-abserr = 1.0e-8
-relerr = 1.0e-6
-# Call the ODE solver.
-start=time.time()
-wsol = odeint(cyt.current_ode_sys, w0, time_results,
-              atol=abserr, rtol=relerr)
-print("python", time.time()-start)
-adaptive_current=wsol[:,0]
-adaptive_potential=wsol[:,2]
-adaptive_theta=wsol[:, 1]
-plt.plot(cyt.time_vec, test)
-#plt.plot(time_results, adaptive_theta)
-plt.show()
 k_idx=cyt.optim_list.index("CdlE2")
 orig_k=vals[k_idx]
 k_str=str(round(orig_k, 3))
 print("HELLO")
+test=cyt.test_vals(vals, "timeseries")
+plt.plot(test)
+plt.plot(current_results)
+plt.show()
 """rs=np.flip([1, 10, 100,200, 600, 800,  1000, 10000, 100000])
 error10=[0.04416823387145996,
         0.05545496940612793,
@@ -193,8 +187,8 @@ plt.xlabel("Ru")
 plt.ylabel("simulation time(secs)")
 plt.legend()
 plt.show()"""
-cyt.simulation_options["numerical_method"]="Brent minimisation"
-rs=[ -0.001,0, 0.001,  0.005]
+cyt.simulation_options["adaptive_ru"]=True
+rs=[ -0.001,-0.001, 0,  0.005]
 for i in range(0, len(rs)):
     plt.subplot(2, len(rs)//2, i+1)
     vals[k_idx]=rs[i]
@@ -204,7 +198,8 @@ for i in range(0, len(rs)):
 
 
     #plt.show()
-
+    abserr = 1.0e-8
+    relerr = 1.0e-6
     stoptime = time_results[-1]
     numpoints = len(current_range)
 
@@ -220,11 +215,11 @@ for i in range(0, len(rs)):
     adaptive_theta=wsol[:, 1]#cyt.calc_theta(wsol[:,0])
     gradients=np.zeros((len(time_results),len(wsol[0])))
     jacobian_eig=np.zeros((2,len(time_results)))
-    for j in range(0, len(time_results)):
+    #for j in range(0, len(time_results)):
         #gradients[j, :]=cyt.current_ode_sys([adaptive_current[j], adaptive_theta[j], adaptive_potential[j]], time_results[j])
         #multiply_vec=[cyt.Cdlp*cyt.nd_param.nd_param_dict["Ru"]*-1, cyt.nd_param.nd_param_dict["gamma"], cyt.Cdlp]
         #gradients[j, :]=np.multiply(gradients[j, :], multiply_vec)
-        jacobian=cyt.system_jacobian([adaptive_current[j], adaptive_theta[j], adaptive_potential[j]], time_results[j])
+        #jacobian=cyt.system_jacobian([adaptive_current[j], adaptive_theta[j], adaptive_potential[j]], time_results[j])
         #eigens, vectors=np.linalg.eig(jacobian)
         #jacobian_eig[:, j]=[min(eigens), max(eigens)]
     ax=plt.gca()
@@ -245,7 +240,7 @@ for i in range(0, len(rs)):
     #p2,=ax.plot(time_results, gradients[:, 0], label="dI", color="red", alpha=0.7)
     #p3,=ax.plot(time_results, gradients[:, 1], label="d$\\theta$", color="green", alpha=0.7)
     #p4,=ax.plot(time_results, gradients[:, 2], label="dE", color="purple", alpha=0.7, linestyle="--")
-    plt.legend(handles=[p1], loc="lower left")
+    plt.legend(handles=[p2], loc="lower left")
 
 #plt.tight_layout()
 plt.show()
@@ -329,10 +324,14 @@ plt.show()"""
 cdl_vals=[0.0005113312954312908, 0.032688180215297846, -0.0016959746570033296, -4.363761285119949e-05, 5.118104508670231, -0.2856860853954224, -0.012643633142239707, -0.0001955648458022985]
 cdl_params=["Cdl","CdlE1", "CdlE2", "CdlE3","Cdlinv","CdlE1inv", "CdlE2inv", "CdlE3inv"]
 for i in range(0, len(cdl_vals)):
-    cyt.dim_dict[cdl_params[i]]=cdl_vals[i]*0
+    cyt.dim_dict[cdl_params[i]]=cdl_vals[i]
+cyt.def_optim_list([ "E_0", "k_0","Ru","Cdl","CdlE1", "CdlE2", "Cdlinv","CdlE1inv", "CdlE2inv", "CdlE3inv","CdlE3","gamma", "alpha"])
+vals=[-0.23742149463308387, 4208.625180353177, 309311.039462819, 1.3159552389823079e-09, -0.026183149240866177, -0.004514578525047176, 4.659333909708308, 1.932246022774966, 1.0345486097545455, 0.09458510883094995, -0.0028551041565438584, 9.998171991735073e-10, 0.4799675166599287]
 
-cyt.def_optim_list([ "E_0", "k_0","Ru","Cdl","CdlE1", "CdlE2", "CdlE3","Cdlinv","CdlE1inv", "CdlE2inv", "CdlE3inv","gamma", "alpha"])
-
+test=cyt.test_vals(vals, "timeseries")
+plt.plot(current_results)
+plt.plot(test)
+plt.show()
 cyt.simulation_options["test"]=False
 cyt.simulation_options["label"]="cmaes"
 cyt.simulation_options["adaptive_ru"]=True
@@ -343,7 +342,7 @@ x0=abs(np.random.rand(cyt.n_parameters()))#cyt.change_norm_group(gc4_3_low_ru, "
 #x0=cyt.change_norm_group(ifft_vals, "norm")
 cmaes_fitting=pints.OptimisationController(score, x0, sigma0=None, boundaries=CMAES_boundaries, method=pints.CMAES)
 cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-7)
-cmaes_fitting.set_parallel(False)
+cmaes_fitting.set_parallel(True)
 found_parameters, found_value=cmaes_fitting.run()
 print(found_parameters)
 cmaes_results=cyt.change_norm_group(found_parameters[:], "un_norm")

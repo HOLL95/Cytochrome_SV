@@ -46,6 +46,7 @@ class single_electron:
 
         self.nd_param=params(dim_parameter_dictionary)
         self.dim_dict=copy.deepcopy(dim_parameter_dictionary)
+        self.dim_dict["tr"]=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
         self.simulation_options=simulation_options
         self.optim_list=self.simulation_options["optim_list"]
         self.harmonic_range=other_values["harmonic_range"]
@@ -219,13 +220,11 @@ class single_electron:
                 Et=isolver_martin_brent.et(self.nd_param.nd_param_dict["E_start"],self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], self.nd_param.nd_param_dict["d_E"], time)
                 dEdt=isolver_martin_brent.dEdt(self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], self.nd_param.nd_param_dict["d_E"], time)
         elif self.simulation_options["method"]=="ramped":
-                tr=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
                 Et=isolver_martin_brent.c_et(self.nd_param.nd_param_dict["E_start"], self.nd_param.nd_param_dict["E_reverse"], (self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]) ,self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], 1,self.nd_param.nd_param_dict["d_E"],time)
-                dEdt=isolver_martin_brent.c_dEdt(tr ,self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], 1,self.nd_param.nd_param_dict["d_E"],time)
+                dEdt=isolver_martin_brent.c_dEdt(self.nd_param.nd_param_dict["tr"] ,self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], 1,self.nd_param.nd_param_dict["d_E"],time)
         elif self.simulation_options["method"]=="dcv":
-                tr=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
                 Et=isolver_martin_brent.dcv_et(self.nd_param.nd_param_dict["E_start"], self.nd_param.nd_param_dict["E_reverse"], (self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]) , 1,time)
-                dEdt=isolver_martin_brent.dcv_dEdt(tr,1,time)
+                dEdt=isolver_martin_brent.dcv_dEdt(self.nd_param.nd_param_dict["tr"],1,time)
         Er=Et-(self.nd_param.nd_param_dict["Ru"]*current)
         ErE0=Er-self.nd_param.nd_param_dict["E_0"]
         alpha=self.nd_param.nd_param_dict["alpha"]
@@ -240,13 +239,12 @@ class single_electron:
                 Et=isolver_martin_brent.et(self.nd_param.nd_param_dict["E_start"],self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], self.nd_param.nd_param_dict["d_E"], time)
                 dEdt=isolver_martin_brent.dEdt(self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], self.nd_param.nd_param_dict["d_E"], time)
         elif self.simulation_options["method"]=="ramped":
-                tr=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
                 Et=isolver_martin_brent.c_et(self.nd_param.nd_param_dict["E_start"], self.nd_param.nd_param_dict["E_reverse"], (self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]) ,self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], 1,self.nd_param.nd_param_dict["d_E"],time)
-                dEdt=isolver_martin_brent.c_dEdt(tr ,self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], 1,self.nd_param.nd_param_dict["d_E"],time)
+                dEdt=isolver_martin_brent.c_dEdt(self.nd_param.nd_param_dict["tr"] ,self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], 1,self.nd_param.nd_param_dict["d_E"],time)
         elif self.simulation_options["method"]=="dcv":
-                tr=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
+
                 Et=isolver_martin_brent.dcv_et(self.nd_param.nd_param_dict["E_start"], self.nd_param.nd_param_dict["E_reverse"], (self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]) , 1,time)
-                dEdt=isolver_martin_brent.dcv_dEdt(tr,1,time)
+                dEdt=isolver_martin_brent.dcv_dEdt(self.nd_param.nd_param_dict["tr"],1,time)
         Er=Et-(self.nd_param.nd_param_dict["Ru"]*current)
         ErE0=Er-self.nd_param.nd_param_dict["E_0"]
         alpha=self.nd_param.nd_param_dict["alpha"]
@@ -448,6 +446,7 @@ class single_electron:
             normed_params=self.change_norm_group(parameters, "un_norm")
         else:
             normed_params=copy.deepcopy(parameters)
+        print(normed_params)
         for i in range(0, len(self.optim_list)):
             self.dim_dict[self.optim_list[i]]=normed_params[i]
         if self.simulation_options["phase_only"]==True:
@@ -459,16 +458,12 @@ class single_electron:
             else:
                 self.simulation_options["numerical_method"]="Brent minimisation"
         if self.simulation_options["numerical_method"]=="Brent minimisation":
-            print("BRENT")
             solver=isolver_martin_brent.brent_current_solver
         elif self.simulation_options["numerical_method"]=="Newton-Raphson":
             solver=isolver_martin_NR.NR_current_solver
             if self.simulation_options["method"]=="dcv":
                 raise ValueError("Newton-Raphson dcv simulation not implemented")
         elif self.simulation_options["numerical_method"]=="pybamm":
-            if "tr" not in self.dim_dict:
-                self.dim_dict["tr"]=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
-                self.nd_param=params(self.dim_dict)
             try:
                 solver=pybamm_sol.simulate
             except:
