@@ -44,9 +44,9 @@ for i in range(0, len(rs)):
         'd_E': 300e-3,   #(ac voltage amplitude - V) freq_range[j],#
         'area': 0.07, #(electrode surface area cm^2)
         'Ru': rs[i],  #     (uncompensated resistance ohms)
-        'Cdl': 7.719E-5, #(capacitance parameters)
-        'CdlE1':1.889E-3,#0.000653657774506,
-        'CdlE2': -3.359E-4,#0.000245772700637,
+        'Cdl': 7.719E-3, #(capacitance parameters)
+        'CdlE1':-0.01,#0.000653657774506,
+        'CdlE2': -3.359E-3,#0.000245772700637,
         "CdlE3":0,
         'gamma': 9.897E-10,
         "original_gamma":1e-10,        # (surface coverage per unit area)
@@ -86,7 +86,7 @@ for i in range(0, len(rs)):
         "experiment_time": time_results1,
         "experiment_current": current_results1,
         "experiment_voltage":voltage_results1,
-        "bounds_val":20,
+        "bounds_val":20000,
     }
     param_bounds={
         'E_0':[param_list['E_start'],param_list['E_reverse']],

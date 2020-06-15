@@ -446,6 +446,7 @@ class single_electron:
             normed_params=self.change_norm_group(parameters, "un_norm")
         else:
             normed_params=copy.deepcopy(parameters)
+        print(normed_params)
         for i in range(0, len(self.optim_list)):
             self.dim_dict[self.optim_list[i]]=normed_params[i]
         if self.simulation_options["phase_only"]==True:
@@ -471,17 +472,20 @@ class single_electron:
                 solver=pybamm_sol.simulate
         else:
             raise ValueError('Numerical method not defined')
-        start=time.time()
+
         if self.simulation_options["numerical_debugging"]!=False:
             current_range, gradient=self.numerical_plots(solver)
             return current_range, gradient
         else:
+
             if self.simulation_options["dispersion"]==True:
                 time_series=self.paralell_disperse(solver)
             else:
+                start=time.time()
                 time_series=solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val)
+                print("TIMEx", time.time()-start)
         time_series=np.array(time_series)
-        self.count+=1
+
         if self.simulation_options["no_transient"]!=False:
             time_series=time_series[self.time_idx]
 
@@ -489,13 +493,11 @@ class single_electron:
         if self.simulation_options["likelihood"]=='fourier':
             filtered=self.top_hat_filter(time_series)
             if (self.simulation_options["test"]==True):
-                if self.count%500==0:
-                    print(list(normed_params))
-                    self.variable_returner()
-                    plt.plot(self.secret_data_fourier, label="data")
-                    plt.plot(filtered , alpha=0.7, label="numerical")
-                    plt.legend()
-                    plt.show()
+                self.variable_returner()
+                plt.plot(self.secret_data_fourier, label="data")
+                plt.plot(filtered , alpha=0.7, label="numerical")
+                plt.legend()
+                plt.show()
             if "multi_output" in self.simulation_options:
                 if self.simulation_options["multi_output"]==True:
                     return np.column_stack((np.real(filtered), np.imag(filtered)))

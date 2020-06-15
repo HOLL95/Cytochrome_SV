@@ -19,12 +19,10 @@ class harmonics:
         time_series=data
         f=np.fft.fftfreq(len(time_series), times[1]-times[0])
         Y=np.fft.fft(time_series)
-
         last_harm=(self.harmonics[-1]*self.input_frequency)
         frequencies=f[np.where((f>0) & (f<(last_harm+(0.5*self.input_frequency))))]
         top_hat=(copy.deepcopy(Y[0:len(frequencies)]))
         harmonics=np.zeros((self.num_harmonics, len(time_series)), dtype="complex")
-        #plt.plot(frequencies, top_hat)
         for i in range(0, self.num_harmonics):
             true_harm=self.harmonics[i]*self.input_frequency
             #plt.axvline(true_harm, color="black")

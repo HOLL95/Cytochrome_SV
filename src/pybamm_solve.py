@@ -46,17 +46,21 @@ class pybamm_solver:
         dIdt=(E_t.diff(pybamm.t)-(self.current/Cdlp)+self.parameter_dict["gamma"]*d_thetadt*(1/Cdlp))/self.parameter_dict["Ru"]
         self.model.rhs={self.current:dIdt, self.theta:d_thetadt}
         self.disc=pybamm.Discretisation()
-        self.model.initial_conditions={self.theta:pybamm.Scalar(0), self.current:pybamm.Scalar(0)}
+        self.model.initial_conditions={self.theta:pybamm.Scalar(1), self.current:pybamm.Scalar(0)}
         self.disc.process_model(self.model)
-        if self.simulation_options["method"]!="dcv":
-            self.solver=pybamm.CasadiSolver(mode="fast")
-        else:
-            self.solver=pybamm.ScipySolver()
+
     def simulate(self, nd_param_dict,time_vec ,*args):
         print("Yes, this is pybamm")
+        start=time.time()
         for key in self.dim_keys:
             self.pybam_val_dict[key]=nd_param_dict[key]
-        solution=self.solver.solve(self.model, time_vec, inputs=self.pybam_val_dict)
-        sol=solution["current"].entries
 
-        return sol
+
+        if self.simulation_options["method"]!="dcv":
+            self.solver=pybamm.CasadiSolver(mode="fast", rtol=1e-7)
+        else:
+            self.solver=pybamm.ScipySolver()
+
+        solution=self.solver.solve(self.model, time_vec, inputs=self.pybam_val_dict)
+        print("pybamm_time", time.time()-start)
+        return solution.y[0]
