@@ -1,0 +1,6 @@
+setup.py
+lib/SV_paper.egg-info/PKG-INFO
+lib/SV_paper.egg-info/SOURCES.txt
+lib/SV_paper.egg-info/dependency_links.txt
+lib/SV_paper.egg-info/requires.txt
+lib/SV_paper.egg-info/top_level.txt
