@@ -50,8 +50,6 @@ class pybamm_solver:
         self.disc.process_model(self.model)
 
     def simulate(self, nd_param_dict,time_vec ,*args):
-        print("Yes, this is pybamm")
-        start=time.time()
         for key in self.dim_keys:
             self.pybam_val_dict[key]=nd_param_dict[key]
 
@@ -62,5 +60,4 @@ class pybamm_solver:
             self.solver=pybamm.ScipySolver()
 
         solution=self.solver.solve(self.model, time_vec, inputs=self.pybam_val_dict)
-        print("pybamm_time", time.time()-start)
         return solution.y[0]

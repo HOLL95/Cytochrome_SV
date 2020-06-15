@@ -168,9 +168,9 @@ class single_electron:
                     self.simulation_options["dispersion_bins"]=[self.simulation_options["dispersion_bins"]]*num_dists
                 else:
                     raise ValueError("Fewer specified bins than distributions")
-            if "GH_quadrature" in self.simulation_options:
-                if self.simulation_options["GH_quadrature"]==True:
-                    self.GH_setup()
+
+            if self.simulation_options["GH_quadrature"]==True:
+                self.GH_setup()
             self.disp_class=dispersion(self.simulation_options, optim_list)
         else:
             self.simulation_options["dispersion"]=False
@@ -196,12 +196,10 @@ class single_electron:
     def t_nondim(self, time):
         return np.multiply(time, self.nd_param.c_T0)
     def n_outputs(self):
-        if "multi_output" in self.simulation_options:
-            if self.simulation_options["multi_output"]==True:
-                return 2
-            else:
-                return 1
-        return 1
+        if self.simulation_options["multi_output"]==True:
+            return 2
+        else:
+            return 1
     def n_parameters(self):
         return len(self.optim_list)
     def Armstrong_dcv_current(self, times, dcv_voltages):
@@ -286,8 +284,8 @@ class single_electron:
         top_hat=copy.deepcopy(Y)
         scale_flag=False
         true_harm=self.nd_param.nd_param_dict["omega"]*self.nd_param.c_T0
-        if "fourier_scaling" in self.simulation_options:
-            if self.simulation_options["fourier_scaling"]!=None:
+
+        if self.simulation_options["fourier_scaling"]!=None:
                 scale_flag=True
         if sum(np.diff(self.harmonic_range))!=len(self.harmonic_range)-1 or scale_flag==True:
             results=np.zeros(len(top_hat), dtype=complex)
@@ -400,11 +398,11 @@ class single_electron:
             return current_range, gradient
     def paralell_disperse(self, solver):
         time_series=np.zeros(len(self.time_vec))
-        if "GH_quadrature" in self.simulation_options:
-            if self.simulation_options["GH_quadrature"]==True:
-                sim_params, self.values, self.weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict), self.other_values["GH_dict"])
+
+        if self.simulation_options["GH_quadrature"]==True:
+            sim_params, self.values, self.weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict), self.other_values["GH_dict"])
         else:
-                sim_params, self.values, self.weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict))
+            sim_params, self.values, self.weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict))
 
         for i in range(0, len(self.weights)):
             for j in range(0, len(sim_params)):
@@ -498,12 +496,11 @@ class single_electron:
                 plt.plot(filtered , alpha=0.7, label="numerical")
                 plt.legend()
                 plt.show()
-            if "multi_output" in self.simulation_options:
-                if self.simulation_options["multi_output"]==True:
-                    return np.column_stack((np.real(filtered), np.imag(filtered)))
-                else:
-                    return filtered
-            return filtered
+
+            if self.simulation_options["multi_output"]==True:
+                return np.column_stack((np.real(filtered), np.imag(filtered)))
+            else:
+                return filtered
         elif self.simulation_options["likelihood"]=='timeseries':
             if self.simulation_options["test"]==True:
                 print(list(normed_params))
@@ -541,6 +538,12 @@ class single_electron:
             simulation_options["label"]="MCMC"
         if "adaptive_ru" not in simulation_options:
             simulation_options["adaptive_ru"]=False
+        if "GH_quadrature" not in simulation_options:
+            simulation_options["GH_quadrature"]=False
+        if "fourier_scaling" not in simulation_options:
+            simulation_options["fourier_scaling"]=None
+        if "multi_output" not in simulation_options:
+            simulation_options["multi_output"]=False
         return simulation_options
 class paralell_class:
     def __init__(self, params, times, method, bounds, solver):
