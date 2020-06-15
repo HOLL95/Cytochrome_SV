@@ -1,0 +1,22 @@
+cyt.def_optim_list(["E_0","k_0","Ru","gamma","omega","cap_phase","phase", "alpha"])
+  cyt.dim_dict["Cdl"]=0.00010640637373095699
+  cyt.dim_dict["CdlE1"]=0.005028640673736776
+  cyt.dim_dict["CdlE2"]=0.0008598525708093628
+  vals=[-0.23517407737120738, 6148.187017529731, 2368.862377447406, 5.039166503421228e-11, 8.941059297423672, 2.786164158826205, 5.713112563634385, 0.47538601753827114]
+  vals=[-0.2305158170996881, 269.4738919570716, 827.0888021703352, 3.953936162963052e-11, 8.940642033032859, 4.451082834023339, 5.260685545809068, 0.40000011623303644]
+  vals=[-0.25950303913604966, 231.91506898676337, 1087.3587725175794, 3.389147297051493e-11, 8.940639805046334, 2.506359831905556, 4.661977866403926, 0.4698649511671318]
+  test_time=cyt.test_vals(vals, "timeseries")
+  harms=harmonics(cyt.other_values["harmonic_range"], cyt.dim_dict["omega"]*cyt.nd_param.c_T0, 0.5)
+  data_harmonics=harms.generate_harmonics(time_results,(current_results))
+  syn_harmonics=harms.generate_harmonics(time_results, test_time)
+  voltages=cyt.define_voltages(transient=True)
+
+  fig, ax=plt.subplots(len(data_harmonics), 1)
+
+  for i in range(0, len(data_harmonics)):
+      ax[i].plot(time_results, (syn_harmonics[i,:]))
+      ax[i].plot(time_results, (data_harmonics[i,:]), alpha=0.7)
+      ax2=ax[i].twinx()
+      ax2.set_yticks([])
+      ax2.set_ylabel(other_values["harmonic_range"][i])
+  plt.show()
