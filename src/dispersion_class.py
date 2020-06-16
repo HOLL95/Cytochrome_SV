@@ -1,4 +1,4 @@
-from scipy.stats import norm, lognorm
+from scipy.stats import norm, lognorm, skewnorm
 import numpy as np
 import itertools
 import copy
@@ -12,7 +12,7 @@ class dispersion:
             print(self.simulation_options["dispersion_bins"],self.simulation_options["dispersion_parameters"])
             raise ValueError("Need to define number of bins for each parameter")
         if len(self.simulation_options["dispersion_distributions"])!=len(self.simulation_options["dispersion_parameters"]):
-            print(self.simulation_options["dispersion_distributions"],self.simulation_options["dispersion_parameters"])
+            print("Dipersion distributions are " ,self.simulation_options["dispersion_distributions"],"dispersion parameters are ",self.simulation_options["dispersion_parameters"])
             raise ValueError("Need to define distributions for each parameter")
         for i in range(0, len(self.simulation_options["dispersion_parameters"])):
             if self.simulation_options["dispersion_distributions"][i]=="uniform":
@@ -24,6 +24,9 @@ class dispersion:
             elif self.simulation_options["dispersion_distributions"][i]=="lognormal":
                 if (self.simulation_options["dispersion_parameters"][i]+"_shape" not in optim_list)  or (self.simulation_options["dispersion_parameters"][i]+"_scale" not in optim_list):
                     raise ValueError("Lognormal distribution requires "+self.simulation_options["dispersion_parameters"][i]+"_shape and "  + self.simulation_options["dispersion_parameters"][i]+"_scale")
+            elif self.simulation_options["dispersion_distributions"][i]=="skewed_normal":
+                if (self.simulation_options["dispersion_parameters"][i]+"_skew" not in optim_list)  or (self.simulation_options["dispersion_parameters"][i]+"_std" not in optim_list) or (self.simulation_options["dispersion_parameters"][i]+"_mean" not in optim_list):
+                    raise ValueError("Skewed normal distribution requires "+self.simulation_options["dispersion_parameters"][i]+"_mean, "+ self.simulation_options["dispersion_parameters"][i]+"_std and "  + self.simulation_options["dispersion_parameters"][i]+"_skew")
             else:
                 raise KeyError(self.simulation_options["dispersion_distributions"][i]+" distribution not implemented")
     def generic_dispersion(self, nd_dict, GH_dict=None):
@@ -66,6 +69,22 @@ class dispersion:
                     param_midpoints[0]=lognorm.ppf((1e-4/2), param_shape, loc=param_loc, scale=param_scale)
                     for j in range(1, self.simulation_options["dispersion_bins"][i]):
                         param_weights[j]=lognorm.cdf(param_vals[j],param_shape, loc=param_loc, scale=param_scale)-lognorm.cdf(param_vals[j-1],param_shape, loc=param_loc, scale=param_scale)
+                        param_midpoints[j]=(param_vals[j-1]+param_vals[j])/2
+                    value_arrays.append(param_midpoints)
+                    weight_arrays.append(param_weights)
+            elif self.simulation_options["dispersion_distributions"][i]=="skewed_normal":
+                    param_mean=nd_dict[self.simulation_options["dispersion_parameters"][i]+"_mean"]
+                    param_std=nd_dict[self.simulation_options["dispersion_parameters"][i]+"_std"]
+                    param_skew=nd_dict[self.simulation_options["dispersion_parameters"][i]+"_skew"]
+                    min_val=skewnorm.ppf(1e-4, param_skew, loc=param_mean, scale=param_std)
+                    max_val=skewnorm.ppf(1-1e-4, param_skew, loc=param_mean, scale=param_std)
+                    param_vals=np.linspace(min_val, max_val, self.simulation_options["dispersion_bins"][i])
+                    param_weights=np.zeros(self.simulation_options["dispersion_bins"][i])
+                    param_weights[0]=skewnorm.cdf(param_vals[0],param_skew, loc=param_mean, scale=param_std)
+                    param_midpoints=np.zeros(self.simulation_options["dispersion_bins"][i])
+                    param_midpoints[0]=skewnorm.ppf((1e-4/2), param_skew, loc=param_mean, scale=param_std)
+                    for j in range(1, self.simulation_options["dispersion_bins"][i]):
+                        param_weights[j]=skewnorm.cdf(param_vals[j],param_skew, loc=param_mean, scale=param_std)-skewnorm.cdf(param_vals[j-1],param_skew, loc=param_mean, scale=param_std)
                         param_midpoints[j]=(param_vals[j-1]+param_vals[j])/2
                     value_arrays.append(param_midpoints)
                     weight_arrays.append(param_weights)

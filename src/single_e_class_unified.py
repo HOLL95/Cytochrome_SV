@@ -14,6 +14,7 @@ import copy
 import time
 import pickle
 import warnings
+import re
 class single_electron:
     def __init__(self,file_name="", dim_parameter_dictionary={}, simulation_options={}, other_values={}, param_bounds={}, results_flag=True):
         if type(file_name) is dict:
@@ -120,7 +121,6 @@ class single_electron:
         try:
             disp_idx=self.simulation_options["dispersion_distributions"].index("normal")
         except:
-            print(dispersion_distributions)
             raise KeyError("No normal distributions for GH quadrature")
         nodes=self.simulation_options["dispersion_bins"][disp_idx]
         labels=["nodes", "weights", "normal_weights"]
@@ -145,22 +145,35 @@ class single_electron:
                     param_boundaries[1][i]=self.param_bounds[self.optim_list[i]][1]
 
             self.boundaries=param_boundaries
-        disp_flags=["mean", "scale", "upper"]
-        disp_check=[[y in x for y in disp_flags] for x in self.optim_list]
+
+        disp_check_flags=["mean", "scale", "upper"]
+        disp_check=[[y in x for y in disp_check_flags] for x in self.optim_list]
         if True in [True in x for x in disp_check]:
             self.simulation_options["dispersion"]=True
-            distribution_flags=["normal", "lognormal", "uniform"]
-            self.simulation_options["dispersion_parameters"]=[]
-            self.simulation_options["dispersion_distributions"]=[]
+            disp_flags=[["mean", "std"], ["shape","scale"], ["lower","upper"], ["mean","std" "skew"]]
+            all_disp_flags=["mean", "std", "skew", "shape", "scale", "upper", "lower"]
+            distribution_names=["normal", "lognormal", "uniform", "skewed_normal"]
+            dist_dict=dict(zip(distribution_names, disp_flags))
+            disp_param_dict={}
             for i in range(0, len(self.optim_list)):
-                count=0
-                for j in range(0, len(disp_flags)):
-                    if count>1:
-                        raise ValueError("Multiple dispersion flags in "+self.optim_list[i])
-                    if disp_flags[j] in self.optim_list[i]:
-                        index=self.optim_list[i].find("_"+disp_flags[j])
-                        self.simulation_options["dispersion_parameters"].append(self.optim_list[i][:index])
-                        self.simulation_options["dispersion_distributions"].append(distribution_flags[j])
+                for j in range(0, len(all_disp_flags)):
+                    if all_disp_flags[j] in self.optim_list[i]:
+                        m=re.search('.+?(?=_'+all_disp_flags[j]+')', self.optim_list[i])
+                        param=m.group(0)
+                        if param in disp_param_dict:
+                            disp_param_dict[param].append(all_disp_flags[j])
+                        else:
+                            disp_param_dict[param]=[all_disp_flags[j]]
+            disp_flags=[["mean", "std"], ["shape","scale"],["lower","upper"], ["mean","std" ,"skew"]]
+            distribution_names=["normal", "lognormal", "uniform", "skewed_normal"]
+            distribution_dict=dict(zip(distribution_names, disp_flags))
+            self.simulation_options["dispersion_parameters"]=list(disp_param_dict.keys())
+            self.simulation_options["dispersion_distributions"]=[]
+            for param in self.simulation_options["dispersion_parameters"]:
+                param_set=disp_param_dict[param]
+                for key in distribution_dict.keys():
+                    if distribution_dict[key]==param_set:
+                        self.simulation_options["dispersion_distributions"].append(key)
             if type(self.simulation_options["dispersion_bins"])is int:
                 if len(self.simulation_options["dispersion_distributions"])>1:
                     num_dists=len(self.simulation_options["dispersion_distributions"])
@@ -178,11 +191,6 @@ class single_electron:
             self.simulation_options["phase_only"]=True
         else:
             self.simulation_options["phase_only"]=False
-        if "alpha_mean" in optim_list or "alpha_std" in optim_list:
-            self.simulation_options["alpha_dispersion"]="normal"
-        else:
-            if "alpha_dispersion" in self.simulation_options:
-                del self.simulation_options["alpha_dispersion"]
     def add_noise(self, series, sd):
         return np.add(series, np.random.normal(0, sd, len(series)))
     def normalise(self, norm, boundaries):
