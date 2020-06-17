@@ -58,6 +58,6 @@ class pybamm_solver:
             self.solver=pybamm.CasadiSolver(mode="fast", rtol=1e-7)
         else:
             self.solver=pybamm.ScipySolver()
-
+        self.solver=pybamm.ScipySolver()
         solution=self.solver.solve(self.model, time_vec, inputs=self.pybam_val_dict)
         return solution.y[0]

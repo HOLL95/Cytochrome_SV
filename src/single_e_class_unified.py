@@ -147,9 +147,12 @@ class single_electron:
             self.boundaries=param_boundaries
 
         disp_check_flags=["mean", "scale", "upper"]
-        disp_check=[[y in x for y in disp_check_flags] for x in self.optim_list]
-        if True in [True in x for x in disp_check]:
-            self.simulation_options["dispersion"]=True
+        for q in range(0, len(self.optim_list)):
+            for j in range(0, len(disp_check_flags)):
+                if disp_check_flags[j] in self.optim_list:
+                    self.simulation_options["dispersion"]=True
+                    break
+        if self.simulation_options["dispersion"]==True:
             disp_flags=[["mean", "std"], ["shape","scale"], ["lower","upper"], ["mean","std" "skew"]]
             all_disp_flags=["mean", "std", "skew", "shape", "scale", "upper", "lower"]
             distribution_names=["normal", "lognormal", "uniform", "skewed_normal"]
@@ -170,9 +173,9 @@ class single_electron:
             self.simulation_options["dispersion_parameters"]=list(disp_param_dict.keys())
             self.simulation_options["dispersion_distributions"]=[]
             for param in self.simulation_options["dispersion_parameters"]:
-                param_set=disp_param_dict[param]
+                param_set=set(disp_param_dict[param])
                 for key in distribution_dict.keys():
-                    if distribution_dict[key]==param_set:
+                    if set(distribution_dict[key])==param_set:
                         self.simulation_options["dispersion_distributions"].append(key)
             if type(self.simulation_options["dispersion_bins"])is int:
                 if len(self.simulation_options["dispersion_distributions"])>1:
@@ -536,6 +539,8 @@ class single_electron:
             simulation_options["test"]=False
         if "method" not in simulation_options:
             raise KeyError("Please define a simulation method")
+        if "disperson" not in simulation_options:
+            simulation_options["dispersion"]=False
         if "phase_only" not in simulation_options:
             simulation_options["phase_only"]=False
         if "likelihood" not in simulation_options:

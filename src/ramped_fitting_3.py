@@ -15,6 +15,7 @@ files=os.listdir(data_loc)
 scan="_1_"
 freq="_9Hz"
 dec_amount=1
+
 for file in files:
     if scan in file and freq in file:
 
@@ -36,7 +37,8 @@ values=values=[[-0.2120092471414607, 0.000005478233474769771, 116.21497065365581
                 [-0.2661180439669948, 0.06702142523298088, 81251.01912987458, 876.5733127765511, 0.000108185721998072834*0, 0.14858346584854376*0, 0.005464884000805036*0,1.1040282150229229e-10,  8.88129543205022, 0,0.41024786661899215]
 
 ]
-plt.plot(voltage_results1, current_results1)
+plt.plot(time_results1, current_results1)
+print(len(current_results1))
 plt.show()
 harm_range=list(range(3,9,1))
 #fig, ax=plt.subplots(len(harm_range), len(values))
@@ -96,7 +98,7 @@ for q in range(0, len(values)):
         "experiment_time": time_results1,
         "experiment_current": current_results1,
         "experiment_voltage":voltage_results1,
-        "bounds_val":20000,
+        "bounds_val":200,
     }
     param_bounds={
         'E_0':[param_list['E_start'],param_list['E_reverse']],
@@ -130,11 +132,6 @@ for q in range(0, len(values)):
     cyt.simulation_options["dispersion_bins"]=[25]
     cyt.simulation_options["GH_quadrature"]=True
     cyt.def_optim_list(["E0_mean", "E0_std","k_0","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","phase", "alpha"])
-
-    vals=[-0.2085010348585462, 0.05769719441256009, 300.88915054231003, 621.7895281614545, 0.00038185721998072834*0, 0.14858346584854376, 0.005464884000805036, 1.995887932170653e-11, 8.88, 3.481574064188825, 0.5990602813196874]
-    vals=[-0.2120092471414607, 0.0005478233474769771, 1000.21497065365581, 431.92918718571053, 0.00044100528598203375*0, 0.14367030986553458, 0.005163770653874243, 9.999387751676114e-11, 8.941077023434541,  3.4597619059667073, 0.5997147084901965]
-    syn_time=cyt.test_vals(values[q], "timeseries")
-    syn_harmonics=harms.generate_harmonics(time_results,(syn_time))
     cyt.simulation_options["method"]="dcv"
     dcv_volt=cyt.e_nondim(cyt.define_voltages())
     cyt.simulation_options["method"]="ramped"
@@ -156,12 +153,6 @@ for q in range(0, len(values)):
 
 plt.show()
 """
-cyt.def_optim_list(["E_0","k_0","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","phase", "alpha"])
-
-v=[-0.2485010348585462, 500.88915054231003, 621.7895281614545,1e-4, 0.014858346584854376, 0.005464884000805036, 5.995887932170653e-11, 8.88129543205022, 0, 0.5990602813196874]
-
-syn_time=cyt.test_vals(v, "timeseries")
-syn_time=cyt.add_noise(syn_time, 0.005*max(syn_time))
 true_data=current_results
 fourier_arg=cyt.top_hat_filter(true_data)
 cyt.secret_data_fourier=fourier_arg
@@ -194,11 +185,11 @@ param_mat=np.zeros((num_runs,len(cyt.optim_list)))
 score_vec=np.ones(num_runs)*1e6
 v=[-0.24892008541902, 1.4420634387553057e-05, 103.80638917478434, 251.5314717200847, 0.0012702287310144848, -0.029785256916493207, -0.0006004534921610592, 7.13462751341829e-11, 8.884862786981506, 3.317186895889136, 5.272982852527357, 0.4000001145710844]
 v=[-0.2458983674007203, 0.014480430628464849, 999.9998329296884, 592.2880684094663, 5.3494907175470974e-05, -0.0499999997770132, 0.004212513848717608, 2.0694222664584297e-11, 8.884843597198367, 6.283185294727796, 2.3248235120878205, 0.5999999797204587]
+start=time.time()
 syn_fourier=cyt.test_vals(v, "fourier")
-plt.plot(fourier_arg)
-plt.plot(cyt.top_hat_filter(syn_time))
-print(np.sum(abs(np.subtract(fourier_arg, syn_fourier))))
-plt.show()
+print(time.time()-start)
+
+
 
 for i in range(0, num_runs):
     x0=abs(np.random.rand(cyt.n_parameters()))#cyt.change_norm_group(gc4_3_low_ru, "norm")

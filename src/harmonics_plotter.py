@@ -16,7 +16,7 @@ class harmonics:
             func=self.empty
         L=len(data)
         window=np.hanning(L)
-        time_series=data
+        time_series=data#np.multiply(data, window)
         f=np.fft.fftfreq(len(time_series), times[1]-times[0])
         Y=np.fft.fft(time_series)
         last_harm=(self.harmonics[-1]*self.input_frequency)

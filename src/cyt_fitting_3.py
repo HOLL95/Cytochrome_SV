@@ -13,7 +13,7 @@ directory=os.getcwd()
 dir_list=directory.split("/")
 data_loc=("/").join(dir_list[:-1])+"/Experiment_data/SV"
 files=os.listdir(data_loc)
-scan="1"
+scan="3"
 freq="_9_"
 dec_amount=32
 for file in files:
@@ -62,6 +62,7 @@ for harmonic in range(3, 7):
         'alpha': 0.5,
         "E0_mean":0.2,
         "E0_std": 0.09,
+        "E0_skew":0.2,
         "cap_phase":0,
         "alpha_mean":0.5,
         "alpha_std":1e-3,
@@ -110,6 +111,7 @@ for harmonic in range(3, 7):
         "cap_phase":[math.pi/2, 2*math.pi],
         "E0_mean":[-0.3,-0.2],
         "E0_std": [1e-4,  0.1],
+        "E0_skew": [-10, 10],
         "alpha_mean":[0.4, 0.65],
         "alpha_std":[1e-3, 0.3],
         "k0_shape":[0,1],
@@ -129,8 +131,8 @@ for harmonic in range(3, 7):
     cyt.dim_dict["phase"]=3*math.pi/2
     print(len(current_results))
     #cyt.def_optim_list(["E_0","k0_shape", "k0_scale","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","cap_phase","phase", "alpha"])
-    cyt.simulation_options["dispersion_bins"]=[10]
-    cyt.simulation_options["GH_quadrature"]=True
+    cyt.simulation_options["dispersion_bins"]=[20]
+    cyt.simulation_options["GH_quadrature"]=False
     cyt.def_optim_list(["E0_mean", "E0_std","k_0","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","cap_phase","phase", "alpha"])
     reduced_list=["E_0","k_0","Ru","gamma","omega","cap_phase","phase", "alpha"]
     vals=[-0.2499999999795545, 0.3997722688641264, 9999.999440245034, 114.8382192838832, 0.00013334402533556777, 0.1077568991954742, 0.0028577794838729777, 1.192053173965407e-10, 8.938971787355355, 1.570796326795171, 4.738470849368598, 0.5999999996633747]
@@ -240,10 +242,12 @@ for harmonic in range(3, 7):
     plt.show()
     #cyt.def_optim_list(["Cdl","CdlE1", "CdlE2","omega","cap_phase"])
     #cyt.dim_dict["gamma"]=0"""
-    cyt.def_optim_list(["E0_mean", "E0_std","k_0","Ru","Cdl", "CdlE1", "CdlE2","gamma","omega","cap_phase","phase", "alpha"])
+    cyt.def_optim_list(["E0_mean", "E0_std","E0_skew","k_0","Ru","Cdl", "CdlE1", "CdlE2","gamma","omega","cap_phase","phase", "alpha"])
+    #cyt.def_optim_list(["E_0","k_0","Ru","Cdl", "CdlE1", "CdlE2","gamma","omega","cap_phase","phase", "alpha"])
     cyt.dim_dict["Cdl"]=0.00010640637373095699
     cyt.dim_dict["CdlE1"]=0.005028640673736776
     cyt.dim_dict["CdlE2"]=0.0008598525708093628
+
     if simulation_options["likelihood"]=="timeseries":
         cmaes_problem=pints.SingleOutputProblem(cyt, time_results, true_data)
     elif simulation_options["likelihood"]=="fourier":
@@ -253,7 +257,12 @@ for harmonic in range(3, 7):
     vals=[-0.2999999987915772, 75.0304099214542, 1129.641670283357, 9.999999991897702e-11, 8.941022396967469, 1.8700190844073654, 4.7959402030923215, 0.5999999948253767]
     vals=[-0.29999998164350944, 0.010000041471497887, 10.774171620544701, 97.8726770656541, 0.0019999969180225312, 0.009999998431337425, 0.0003819160490711026, 5.675257231479832e-11, 8.939591092801802, 1.5707964495605589, 5.217487625792245, 0.40273190589632335]
     vals=[-0.2228073641220668, 0.00010603430631268799, 449.1343851598667, 376.3477261551556, 0.0005920303558656501, -0.004353832825229434, 0.001689359566633972, 9.999919753517283e-11, 8.941107666337048, 5.889206808272153, 5.7192890464726895, 0.5999992778697664]
-
+    vals=[-0.2579076671924837, 0.00015728683492038188, 52.68097510680315, 68.50707882828115, 0.000733377715139665, 0.016236691146013005, -7.820740568357382e-05, 2.536139328581548e-11, 8.940938684529883, 1.5709392594136768, 4.915384770995644, 0.5382906064246701]
+    vals=[-0.25787767177157567, 52.76186403679123, 68.39497579798049, 0.00010640637373095699, 0.005028640673736776, 0.0008598525708093628, 2.5340812914467008e-11, 8.940938900479116, 1.570839499336432, 4.915380377308822, 0.5385210166244453]
+    vals=[-0.23439783739718922, 42.00841759206751, 267.99933752556836, 0.00011704701110398429, 0.004525778371071013, 0.000945837827855062, 3.270236305815754e-11, 8.941036628944167, 2.7688108758782226, 5.038258046998925, 0.5868493852130298]
+    vals=[-0.23823115534306044, 0.010853855815583322, 0,54.83121527567214, 247.1060593274587, 0.0001170470107128401, 0.0045257789042600595, 0.0009458378264908692, 3.0265369303073404e-11, 8.940744052716612, 2.74961385519821, 4.984323211104551, 0.5786042890230194]
+    vals=[-0.23822574830472312, 0.01082804568798319,0, 54.80815485794722, 247.10661114567895, 0.00011704701099294868, 0.004525776663764095, 0.0009458378023780387, 3.0263501981253515e-11, 8.940742898846258, 2.7496174184849864, 4.984421155873804, 0.5786256352781749]
+    vals=[-0.2355296901348899, 0.00020486942554457825, -1.3936849491275964, 131.1311416295316, 450.4761351603096, 0.00011470185276081948, 0.0025143210192612882, 0.001289738847946819, 2.922684768919658e-11, 8.941016507562189, 5.046194168331546, 5.1882186609272765, 0.5527421473090354]
     test_time=cyt.test_vals(vals, "timeseries")
     harms=harmonics(cyt.other_values["harmonic_range"], cyt.dim_dict["omega"]*cyt.nd_param.c_T0, 0.5)
     data_harmonics=harms.generate_harmonics(time_results,(current_results))
@@ -269,8 +278,8 @@ for harmonic in range(3, 7):
       ax2.set_yticks([])
       ax2.set_ylabel(other_values["harmonic_range"][i])
     plt.show()
-    plt.plot(cyt.top_hat_filter(test_time))
-    plt.plot(fourier_arg)
+    plt.plot(voltage_results, test_time)
+    plt.plot(voltage_results, current_results)
     plt.show()
 
 
