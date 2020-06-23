@@ -3,6 +3,7 @@ import numpy as np
 import itertools
 import copy
 import math
+import matplotlib.pyplot as plt
 class dispersion:
     def __init__(self, simulation_options, optim_list):
         self.simulation_options=simulation_options
@@ -53,7 +54,7 @@ class dispersion:
                         for j in range(1, self.simulation_options["dispersion_bins"][i]):
                             param_weights[j]=norm.cdf(param_vals[j],loc=param_mean, scale=param_std)-norm.cdf(param_vals[j-1],loc=param_mean, scale=param_std)
                             param_midpoints[j]=(param_vals[j-1]+param_vals[j])/2
-                        param_midpoints=param_vals
+                        param_vals=param_midpoints
                     value_arrays.append(param_vals)
                     weight_arrays.append(param_weights)
             elif self.simulation_options["dispersion_distributions"][i]=="lognormal":

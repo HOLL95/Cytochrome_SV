@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 plot=True
 from harmonics_plotter import harmonics
+from multiplotter import multiplot
 import os
 import sys
 import math
@@ -26,6 +27,7 @@ fig, ax=plt.subplots(len(harm_range), len(values))
 scan="_1_"
 freq="_9Hz"
 dec_amount=1
+
 for file in files:
     if scan in file and freq in file:
 

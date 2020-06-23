@@ -18,6 +18,7 @@ unit_dict={
     'gamma': 'mol cm^{-2}$',
     'k_0': 's^{-1}$', #(reaction rate s-1)
     'alpha': "",
+    'E0_skew':"",
     "E0_mean":"V",
     "E0_std": "V",
     "k0_shape":"",
@@ -45,13 +46,14 @@ fancy_names={
     'CdlE2': "$C_{dlE2}$",#0.000245772700637,
     'CdlE3': "$C_{dlE3}$",#1.10053945995e-06,
     'gamma': '$\\Gamma',
+    'E0_skew':"$E^0$ skew",
     'k_0': '$k_0', #(reaction rate s-1)
     'alpha': "$\\alpha$",
     "E0_mean":"$E^0 \\mu$",
     "E0_std": "$E^0 \\sigma$",
     "cap_phase":"C$_{dl}$ phase",
-    "k0_shape":"$k^0$ shape",
-    "k0_scale":"$k^0$ scale",
+    "k0_shape":"$\\log(k^0) \\sigma$",
+    "k0_scale":"$\\log(k^0) \\mu$",
     "alpha_mean": "$\\alpha\\mu$",
     "alpha_std": "$\\alpha\\sigma$",
     'phase' : "Phase",
@@ -60,15 +62,14 @@ fancy_names={
     "error":"RMSE",
 }
 
-optim_list=["","E0_mean", "E0_std","k_0","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","cap_phase","phase", "alpha"]
+optim_list=["","E_0","k0_scale", "k0_shape","Ru","Cdl","CdlE1","gamma","phase", "alpha"]
 name_list=[fancy_names[x] for x in optim_list]
 values=[
-        [-0.23316743616752747, 3.918646030384116e-05, 125.32922208435807, 90.19806606006952, 0.0002308962063433851, -0.03321102983786629, -0.00044615696059807815, 2.1474804559923774e-11, 8.940960632790196, 3.6013722357683, 4.9024678072287475, 0.47377445163491094],
-        [-0.2449750573466457, 2.262494407868915e-05, 473.82555085751864, 377.37680668143696, 0.00011996208567934304, -0.026969075660430122, 0.002277078902568992, 2.1148628268644674e-11, 8.884779455366834, 5.434200471812481, 5.434200471812481,0.4000000075012816]
+    [-0.2, 10, 0.25, 0.0, 1e-05, 0, 1e-10, 0.0, 0.5]
 ]
-parameter_orientation="column"
+parameter_orientation="row"
 param_num=len(name_list)+1
-names=["Inferred sinusoidal", "Inferred Ramped"]
+names=["Simulation params"]
 title_num=len(names)+1
 table_file=open("image_tex_edited.tex", "w")
 
@@ -98,7 +99,7 @@ if parameter_orientation=="row":
             else:
                 end_str=" & "
             print(names[i])
-            if abs(values[i][j])>1e-2:
+            if abs(values[i][j])>1e-2 or values[i][j]==0:
 
                 row_n=row_n+(str(round(values[i][j],3))+ end_str)
             else:
@@ -141,7 +142,7 @@ elif parameter_orientation =="column":
     for j in range(0, len(values[0])):
         int_row=""
         for q in range(0, len(names)):
-            if values[q][j]>1e-2:
+            if values[q][j]>1e-2 or values[q][j]==0:
                 int_row=int_row+"& "+(str(round(values[q][j],3)))+" "
             else:
                 int_row=int_row+"& "+"{:.3E}".format(Decimal(str(values[q][j])))+" "
@@ -167,7 +168,7 @@ f.close()
 
 table_file.close()
 filename=""
-filename="Jack_diff_harm_fit_"
+filename="k0_disp_params_"
 filename=filename+"table.png"
 os.system("pdflatex image_tex_edited.tex")
 os.system("convert -density 300 -trim image_tex_edited.pdf -quality 100 " + filename)

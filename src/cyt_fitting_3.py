@@ -91,7 +91,7 @@ for harmonic in range(3, 7):
 
     other_values={
         "filter_val": 0.5,
-        "harmonic_range":list(range(3,10,1)),
+        "harmonic_range":list(range(3,9,1)),
         "experiment_time": time_results1,
         "experiment_current": current_results1,
         "experiment_voltage":voltage_results1,
@@ -272,14 +272,18 @@ for harmonic in range(3, 7):
     fig, ax=plt.subplots(len(data_harmonics), 1)
 
     for i in range(0, len(data_harmonics)):
-      ax[i].plot(voltage_results, (syn_harmonics[i,:]))
-      ax[i].plot(voltage_results, (data_harmonics[i,:]), alpha=0.7)
+      ax[i].plot(voltage_results, (syn_harmonics[i,:]), label="Sim")
+      ax[i].plot(voltage_results, (data_harmonics[i,:]), alpha=0.7, label="Exp")
       ax2=ax[i].twinx()
       ax2.set_yticks([])
-      ax2.set_ylabel(other_values["harmonic_range"][i])
-    plt.show()
-    plt.plot(voltage_results, test_time)
-    plt.plot(voltage_results, current_results)
+      ax2.set_ylabel(other_values["harmonic_range"][i], rotation=0)
+      if i==0:
+          ax[i].legend(loc="upper right")
+          ax[i].set_title("Sinusoidal skew fit")
+      if i==len(data_harmonics)-1:
+          ax[i].set_xlabel("Nondim time")
+      if i==3:
+          ax[i].set_ylabel("Nondim voltage")
     plt.show()
 
 

@@ -162,32 +162,53 @@ cdl_params=["Cdl","CdlE1", "CdlE2","omega","cap_phase", "phase"]
 #for z in range(0, len(cdl_params)):
 #	cyt.param_bounds[cdl_params[z]]=[0.75*cdl_vals[z], 1.25*cdl_vals[z]]
 #cyt.def_optim_list(["E0_mean", "E0_std","k_0","Ru","gamma","omega", "phase", "alpha"])
-cyt.def_optim_list(["E0_mean", "E0_std", "E0_skew","k_0","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","cap_phase","phase", "alpha"])
-vals=[-0.23935261365191968, 0.010000001833497703, -9.99771847635053, 53.93220379977755, 999.9996074395051, 5.383823665743347e-05, -0.02076353199575397, 0.007029381215910355, 2.173426672774541e-11, 8.884884754617062, 1.965008426077372, 1.3878109329295476, 0.5460636485738265]
-syn_time=cyt.test_vals(vals, "timeseries")
-plt.plot(cyt.top_hat_filter(syn_time))
-plt.plot(fourier_arg, alpha=0.7)
-plt.show()
-syn_harmonics=harms.generate_harmonics(time_results,(syn_time))
-data_harmonics=harms.generate_harmonics(time_results,(current_results))
+cyt.def_optim_list(["E0_mean", "E0_std","k_0","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","cap_phase","phase", "alpha"])
+vals=[
+        [-0.23935261365191968, 0.00020486942554457825, -1.3936849491275964, 131.1311416295316, 999.9996074395051, 5.383823665743347e-05, -0.02076353199575397, 0.007029381215910355, 2.173426672774541e-11, 8.884884754617062, 1.965008426077372, 1.3878109329295476, 0.5460636485738265],
+        [-0.23935261365191968, 0.010000001833497703, -9.99771847635053, 53.93220379977755, 999.9996074395051, 5.383823665743347e-05, -0.02076353199575397, 0.007029381215910355, 2.173426672774541e-11, 8.884884754617062, 1.965008426077372, 1.3878109329295476, 0.5460636485738265],
+        [-0.23935261365191968, 0.010000001833497703, -9.99771847635053, 53.93220379977755, 999.9996074395051, 5.383823665743347e-05, -0.02076353199575397, 0.007029381215910355, 2.173426672774541e-11, 8.884884754617062, 1.965008426077372, 1.3878109329295476, 0.5460636485738265],
+        ]
+vals=[
+
+        [-0.22729161723898927, 0.02274019351354671, -8.618005726466912, 50.36805568061325, 1214.3687528084954, 2.470942807529444e-05, -0.02407633543515114, 0.00999999999998086, 2.2237135661359653e-11, 8.884829963320826, 6.2831853070106085, 1.3199558755592415e-09, 0.5402705909466587]
+        ]
+vals=[
+    [-0.24475850404009977, 0.020813753114607054, 120.58250154877311, 0.423398159178522, 0.0006022876040908104, -0.025876564530892432, -0.017483429836173528, 1.496476957450661e-11, 8.884847353877376, 3.241957939541493, 1.6380317139124516, 0.4003811412321984]
+]
+vals=[
+    [-0.25549546467502104, 0.024599690122827058, 320.1269038302346, 425.092729031765, 0.0007580642617042125, 0.06264702347418366, 0.008437167809256962, 8.159994053140338e-11, 8.884808603546047, 4.526127180837634, 3.797180059461594, 0.5999995579028523],
+
+
+    ]
+vals=[
+    [-0.15000001621515757, 0.02267500146549557, 329.02327044966836, 499.9302524363667, 0.0012101637063185937, 0.025735070587578207, 0.00012489571678975242, 9.999925872986152e-11, 8.884792799115775, 2.403679949352115, 1.6470415159900251, 0.5491541073325497]
+]
 cyt.simulation_options["method"]="dcv"
 dcv_volt=cyt.e_nondim(cyt.define_voltages())
 cyt.simulation_options["method"]="ramped"
 
+for q in range(0, len(vals)):
+    syn_time=cyt.test_vals(vals[q], "timeseries")
+    syn_harmonics=harms.generate_harmonics(time_results,(syn_time))
+    data_harmonics=harms.generate_harmonics(time_results,(current_results))
 
-for i in range(0, len(data_harmonics)):
-    plt.subplot(len(data_harmonics),1,i+1)
-    ax=plt.gca()
-    ax.plot(time_results, abs(data_harmonics[i,:]),  label="Data")
-    ax.plot(time_results, abs(syn_harmonics[i,:]), alpha=0.7, label="Simulated")
-    ax2=ax.twinx()
-    ax2.set_yticks([])
-    ax2.set_ylabel(other_values["harmonic_range"][i], rotation=0)
-    if i==0:
-        ax.legend(loc="upper right")
-    if i==len(data_harmonics)-1:
-        ax.set_xlabel("Nondim time")
-    if i==3:
-        ax.set_ylabel("Nondim current")
+
+
+    for i in range(0, len(data_harmonics)):
+        plt.subplot(len(data_harmonics),1,i+1)
+        ax=plt.gca()
+
+        ax.plot(time_results, abs(syn_harmonics[i,:]), label="Sim")
+        if q==0:
+            ax.plot(time_results, abs(data_harmonics[i,:]),  alpha=0.7, label="Exp")
+        ax2=ax.twinx()
+        ax2.set_yticks([])
+        ax2.set_ylabel(other_values["harmonic_range"][i], rotation=0)
+        if i==0:
+            ax.legend(loc="upper right")
+        if i==len(data_harmonics)-1:
+            ax.set_xlabel("Nondim time")
+        if i==3:
+            ax.set_ylabel("Nondim current")
 
 plt.show()
