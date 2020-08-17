@@ -199,16 +199,14 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
     const double cap_phase = get(params,std::string("cap_phase"),0.0);
     const double delta_E = get(params,std::string("d_E"),0.1);
     const double sf= get(params,std::string("sampling_freq"),0.1);
-    double Cdlinv;
-    double CdlEinv;
-    double CdlE2inv;
-    double CdlE3inv;
     const double dt=  min(t[1]-t[0], sf);
     double Itot0,Itot1;
     double u1n0;
     int input=-1; // 0 for ramped, 1 for sinusoidal, 2 for DCV
     double t1 = 0.0;
-    u1n0 = 1.0;
+    u1n0 = 0.0;
+    const double Cdlp = Cdl*(1.0 + CdlE*E + CdlE2*pow(E,2)+ CdlE3*pow(E,2));
+    Itot0 =Cdlp*dE;
 
     double tr=E_reverse-E_start;
     if ((method.compare("ramped"))==0){
@@ -234,18 +232,14 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
     else if (input==2){
       E=dcv_et(E_start, E_reverse,tr,v, t1);
       dE=dcv_dEdt(tr,v, t1+0.5*dt);
-      Cdlinv = get(params,std::string("Cdlinv"),0.0);
-      CdlEinv = get(params,std::string("CdlE1inv"),0.0);
-      CdlE2inv = get(params,std::string("CdlE2inv"),0.0);
-      CdlE3inv = get(params,std::string("CdlE3inv"),0.0);
+      Itot0=0;
 
     }
     //cout<<E<<" "<<dE<<" "<<" "<<Cdl<<" "<<CdlE<<" "<<CdlE2<<" "<<CdlE3<<" "<<E0<<" "<<Ru<<" "<<k0<<" "<<alpha<<" "<<Itot0<<" "<<u1n0<<" "<<dt<<" "<<gamma<<" dicts"<<"\n";
 
-    const double Cdlp = Cdl*(1.0 + CdlE*E + CdlE2*pow(E,2)+ CdlE3*pow(E,2));
-    double Itot_bound =bounds_val;//std::max(10*Cdlp*delta_E*omega/Nt,1.0);
-    Itot0 =Cdlp*dE;
     Itot1 = Itot0;
+    double Itot_bound =bounds_val;//std::max(10*Cdlp*delta_E*omega/Nt,1.0);
+
     for (int n_out = 0; n_out < t.size(); n_out++) {
         while (t1 < t[n_out]) {
             Itot0 = Itot1;
@@ -263,12 +257,7 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
               E=dcv_et(E_start, E_reverse,tr,v, t1);
               dE=dcv_dEdt(tr,v, t1+0.5*dt);
               cap_E=E;
-              if (t1 > tr){
-                Cdl=Cdlinv;
-                CdlE=CdlEinv;
-                CdlE2=CdlE2inv;
-                CdlE3=CdlE3inv;
-               }
+
             }
             e_surface_fun bc(E,dE,cap_E,Cdl,CdlE,CdlE2,CdlE3,E0,Ru,k0,alpha,Itot0,u1n0,dt,gamma);
             boost::uintmax_t max_it = max_iterations;

@@ -4,17 +4,13 @@ from scipy.stats import norm, lognorm
 import math
 import numpy as np
 import itertools
-import multiprocessing as mp
-import matplotlib.pyplot as plt
 from params_class import params
 from dispersion_class import dispersion
 from decimal import Decimal
-from pybamm_solve import pybamm_solver
 import copy
-import time
-import pickle
 import warnings
 import re
+import matplotlib.pyplot as plt
 class single_electron:
     def __init__(self,file_name="", dim_parameter_dictionary={}, simulation_options={}, other_values={}, param_bounds={}, results_flag=True):
         if type(file_name) is dict:
@@ -40,79 +36,81 @@ class single_electron:
             missing_params=required_params-req_union
             raise KeyError("Essential parameter(s) mising:",missing_params)
         key_list=list(dim_parameter_dictionary.keys())
-        if "phase only" in simulation_options and "cap_phase" not in key_list:
+        if simulation_options["phase_only"]==False and "cap_phase" not in key_list:
             raise KeyError("Specify either phase only or a capacitance phase")
         if simulation_options["method"]=="ramped":
             dim_parameter_dictionary["v_nondim"]=True
 
-        self.nd_param=params(dim_parameter_dictionary)
-        self.dim_dict=copy.deepcopy(dim_parameter_dictionary)
-        self.dim_dict["tr"]=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
+
         self.simulation_options=simulation_options
+        self.other_values=other_values
         self.optim_list=self.simulation_options["optim_list"]
         self.harmonic_range=other_values["harmonic_range"]
         self.num_harmonics=len(self.harmonic_range)
         self.filter_val=other_values["filter_val"]
         self.bounds_val=other_values["bounds_val"]
-        self.count=0
-
-        self.time_array=[]
-        if self.simulation_options["experimental_fitting"]==True:
-            if simulation_options["method"]=="sinusoidal":
-                time_end=(self.nd_param.nd_param_dict["num_peaks"]/self.nd_param.nd_param_dict["omega"])
-            elif simulation_options["method"]=="ramped":
-                time_end=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])*self.nd_param.c_T0
-            elif simulation_options["method"]=="dcv":
-                time_end=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])*self.nd_param.c_T0
-            if simulation_options["no_transient"]!=False:
-                if simulation_options["no_transient"]>time_end:
-                    warnings.warn("Previous transient removal method detected")
-                    time_idx=tuple(np.where(other_values["experiment_time"]<=time_end))
-                    desired_idx=tuple((range(simulation_options["no_transient"],time_idx[0][-1])))
-                    self.time_idx=time_idx[:-1]
-                else:
-                    time_idx=tuple(np.where((other_values["experiment_time"]<=time_end) & (other_values["experiment_time"]>simulation_options["no_transient"])))
-                    desired_idx=time_idx
-                    self.time_idx=time_idx[:-1]
-            else:
-                desired_idx=tuple(np.where(other_values["experiment_time"]<=time_end))
-                time_idx=desired_idx
-                self.time_idx=time_idx[:-1]
-            if self.file_init==False or results_flag==True:
-                self.time_vec=other_values["experiment_time"][time_idx]/self.nd_param.c_T0
-                other_values["experiment_time"]=other_values["experiment_time"][desired_idx]/self.nd_param.c_T0
-                other_values["experiment_current"]=other_values["experiment_current"][desired_idx]/self.nd_param.c_I0
-                other_values["experiment_voltage"]=other_values["experiment_voltage"][desired_idx]/self.nd_param.c_E0
-            else:
-                if simulation_options["method"]=="sinusoidal":
-                    self.nd_param.nd_param_dict["time_end"]=(self.nd_param.nd_param_dict["num_peaks"])#/self.nd_param.nd_param_dict["omega"])
-                else:
-                    self.nd_param.nd_param_dict["time_end"]=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])/self.nd_param.nd_param_dict["v"]
-                self.times()
-        else:
-            if simulation_options["method"]=="sinusoidal":
-                self.nd_param.nd_param_dict["time_end"]=(self.nd_param.nd_param_dict["num_peaks"])#/self.nd_param.nd_param_dict["omega"])
-            else:
-                self.nd_param.nd_param_dict["time_end"]=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])/self.nd_param.nd_param_dict["v"]
-            self.times()
-            if simulation_options["no_transient"]!=False:
-                    transient_time=self.t_nondim(self.time_vec)
-                    start_idx=np.where(transient_time>simulation_options["no_transient"])
-                    self.time_idx=time_idx[:-1]
-            else:
-                    desired_idx=tuple(np.where(other_values["experiment_time"]<=time_end))
-                    self.time_idx=desired_idx[:-1]
+        self.nd_param=params(dim_parameter_dictionary)
+        self.dim_dict=copy.deepcopy(dim_parameter_dictionary)
+        self.calculate_times()
         self.def_optim_list(self.simulation_options["optim_list"])
         frequencies=np.fft.fftfreq(len(self.time_vec), self.time_vec[1]-self.time_vec[0])
         self.frequencies=frequencies[np.where(frequencies>0)]
         last_point= (self.harmonic_range[-1]*self.nd_param.nd_param_dict["omega"])+(self.nd_param.nd_param_dict["omega"]*self.filter_val)
         self.test_frequencies=frequencies[np.where(self.frequencies<last_point)]
-        self.other_values=other_values
         self.boundaries=None
         self.param_bounds=param_bounds
         if self.simulation_options["experimental_fitting"]==True:
             self.secret_data_fourier=self.top_hat_filter(other_values["experiment_current"])
             self.secret_data_time_series=other_values["experiment_current"]
+    def calculate_times(self,):
+        self.dim_dict["tr"]=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
+        if self.simulation_options["experimental_fitting"]==True:
+            if self.simulation_options["method"]=="sinusoidal":
+                time_end=(self.nd_param.nd_param_dict["num_peaks"]/self.nd_param.nd_param_dict["omega"])
+            elif self.simulation_options["method"]=="ramped":
+                time_end=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])*self.nd_param.c_T0
+            elif self.simulation_options["method"]=="dcv":
+                time_end=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])*self.nd_param.c_T0
+            if self.simulation_options["no_transient"]!=False:
+                if self.simulation_options["no_transient"]>time_end:
+                    warnings.warn("Previous transient removal method detected")
+                    time_idx=tuple(np.where(self.other_values["experiment_time"]<=time_end))
+                    desired_idx=tuple((range(self.simulation_options["no_transient"],time_idx[0][-1])))
+                    self.time_idx=time_idx[:-1]
+                else:
+                    time_idx=tuple(np.where((self.other_values["experiment_time"]<=time_end) & (self.other_values["experiment_time"]>self.simulation_options["no_transient"])))
+                    desired_idx=time_idx
+                    self.time_idx=time_idx[:-1]
+            else:
+                desired_idx=tuple(np.where(self.other_values["experiment_time"]<=time_end))
+                time_idx=desired_idx
+                self.time_idx=time_idx[:-1]
+            if self.file_init==False or results_flag==True:
+                self.time_vec=self.other_values["experiment_time"][time_idx]/self.nd_param.c_T0
+                self.other_values["experiment_time"]=self.other_values["experiment_time"][desired_idx]/self.nd_param.c_T0
+                self.other_values["experiment_current"]=self.other_values["experiment_current"][desired_idx]/self.nd_param.c_I0
+                self.other_values["experiment_voltage"]=self.other_values["experiment_voltage"][desired_idx]/self.nd_param.c_E0
+            else:
+                if self.simulation_options["method"]=="sinusoidal":
+                    self.nd_param.nd_param_dict["time_end"]=(self.nd_param.nd_param_dict["num_peaks"])#/self.nd_param.nd_param_dict["omega"])
+                else:
+                    self.nd_param.nd_param_dict["time_end"]=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])/self.nd_param.nd_param_dict["v"]
+                self.times()
+        else:
+            if self.simulation_options["method"]=="sinusoidal":
+                self.nd_param.nd_param_dict["time_end"]=(self.nd_param.nd_param_dict["num_peaks"])#/self.nd_param.nd_param_dict["omega"])
+            else:
+                self.nd_param.nd_param_dict["time_end"]=(2*(self.dim_dict["E_reverse"]-self.dim_dict["E_start"])/self.dim_dict["v"])/self.nd_param.c_T0#DIMENSIONAL
+            self.times()
+            if self.simulation_options["no_transient"]!=False:
+                    transient_time=self.t_nondim(self.time_vec)
+                    time_idx=np.where((transient_time<=(self.nd_param.nd_param_dict["time_end"]*self.nd_param.c_T0)) & (transient_time>self.simulation_options["no_transient"]))
+                    self.time_idx=time_idx
+
+            else:
+                    transient_time=self.t_nondim(self.time_vec)
+                    desired_idx=tuple(np.where(transient_time<=(self.nd_param.nd_param_dict["time_end"]*self.nd_param.c_T0)))
+                    self.time_idx=desired_idx
     def GH_setup(self):
         """
         We assume here that for n>1 normally dispersed parameters then the order of the integral
@@ -239,6 +237,7 @@ class single_electron:
         dIdt=(dEdt-(current/self.Cdlp)+self.nd_param.nd_param_dict["gamma"]*d_thetadt*(1/self.Cdlp))/self.nd_param.nd_param_dict["Ru"]
         f=[dIdt, d_thetadt, dEdt]
         return f
+    #def adaptive_simulate
     def system_jacobian(self, state_vars, time):
         current, theta, potential=state_vars
         if self.simulation_options["method"]=="sinusoidal":
@@ -388,12 +387,6 @@ class single_electron:
         self.simulation_options["test"]=test
         if self.simulation_options["numerical_debugging"]==False:
             results=self.simulate(parameters, self.frequencies)
-            if self.n_outputs()==1:
-                if sum(results)==0:
-                    raise ValueError("Not simulated, check options")
-            elif self.n_outputs()==1:
-                if sum(results[:,0])==0 or sum(results[:,1])==0:
-                    raise ValueError("Not simulated, check options")
             self.simulation_options["likelihood"]=orig_likelihood
             self.simulation_options["label"]=orig_label
             self.simulation_options["test"]=orig_test
@@ -404,6 +397,30 @@ class single_electron:
             self.simulation_options["label"]=orig_label
             self.simulation_options["test"]=orig_test
             return current_range, gradient
+    def update_params(self, param_list):
+        if len(param_list)!= len(self.optim_list):
+            print(self.optim_list)
+            print(param_list)
+            raise ValueError('Wrong number of parameters')
+        if self.simulation_options["label"]=="cmaes":
+            normed_params=self.change_norm_group(param_list, "un_norm")
+        else:
+            normed_params=copy.deepcopy(param_list)
+        print(normed_params, self.optim_list)
+        for i in range(0, len(self.optim_list)):
+            self.dim_dict[self.optim_list[i]]=normed_params[i]
+        self.nd_param=params(self.dim_dict)
+    def return_distributions(self, bins):
+        original_bins=self.simulation_options["dispersion_bins"]
+        if type(bins) is not list:
+            bins=[bins]
+        self.simulation_options["dispersion_bins"]=bins
+        if self.simulation_options["GH_quadrature"]==True:
+            sim_params, values, weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict), self.other_values["GH_dict"])
+        else:
+            sim_params, values, weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict))
+        self.simulation_options["dispersion_bins"]=original_bins
+        return values, weights
     def paralell_disperse(self, solver):
         time_series=np.zeros(len(self.time_vec))
 
@@ -415,6 +432,7 @@ class single_electron:
         for i in range(0, len(self.weights)):
             for j in range(0, len(sim_params)):
                 self.nd_param.nd_param_dict[sim_params[j]]=self.values[i][j]
+            print(self.dim_dict["k_0"], self.nd_param.nd_param_dict["k_0"], self.nd_param.nd_param_dict["k_0"]/self.nd_param.c_T0, "kinetic parameters")
             time_series_current=solver(self.nd_param.nd_param_dict, self.time_vec,self.simulation_options["method"], -1, self.bounds_val)
             time_series=np.add(time_series, np.multiply(time_series_current, np.prod(self.weights[i])))
         return time_series
@@ -452,7 +470,7 @@ class single_electron:
             normed_params=self.change_norm_group(parameters, "un_norm")
         else:
             normed_params=copy.deepcopy(parameters)
-        print(normed_params)
+        print(normed_params, self.optim_list)
         for i in range(0, len(self.optim_list)):
             self.dim_dict[self.optim_list[i]]=normed_params[i]
         if self.simulation_options["phase_only"]==True:
@@ -487,11 +505,8 @@ class single_electron:
             if self.simulation_options["dispersion"]==True:
                 time_series=self.paralell_disperse(solver)
             else:
-                start=time.time()
                 time_series=solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val)
-                print("TIMEx", time.time()-start)
         time_series=np.array(time_series)
-
         if self.simulation_options["no_transient"]!=False:
             time_series=time_series[self.time_idx]
 

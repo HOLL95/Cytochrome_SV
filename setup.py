@@ -62,6 +62,8 @@ setup(
     description='The companion code for the sinusoidal voltammetry paper',
     long_description='',
     ext_modules=[CMakeExtension('SV_paper')],
+    packages=find_packages('src'),
+    package_dir={'': 'src'},
     cmdclass=dict(build_ext=CMakeBuild),
     zip_safe=False,
 )

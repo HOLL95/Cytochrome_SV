@@ -155,12 +155,9 @@ cyt.nd_param.nd_param_dict["time_end"]=time_results[-1]
 #cyt.times()
 print(len(cyt.time_vec))
 volts=cyt.define_voltages()
-cyt.simulation_options["numerical_method"]="pybamm"
+cyt.simulation_options["numerical_method"]="Brent minimisation"
 cyt.def_optim_list(norm_vals)
-test=cyt.test_vals(vals, "timeseries")
-plt.plot(test)
-plt.plot(current_results)
-plt.show()
+
 k_idx=cyt.optim_list.index("CdlE2")
 orig_k=vals[k_idx]
 k_str=str(round(orig_k, 3))
@@ -207,6 +204,8 @@ for i in range(0, len(rs)):
     adaptive_current=wsol[:,0]
     adaptive_potential=wsol[:,2]
     adaptive_theta=wsol[:, 1]#cyt.calc_theta(wsol[:,0])
+    plt.plot(adaptive_potential, adaptive_current)
+    plt.show()
     gradients=np.zeros((len(time_results),len(wsol[0])))
     jacobian_eig=np.zeros((2,len(time_results)))
     #for j in range(0, len(time_results)):

@@ -1,5 +1,3 @@
-import  matplotlib.pyplot as plt
-import pints.plot
 import numpy as np
 import copy
 class harmonics:
@@ -11,12 +9,20 @@ class harmonics:
         print("initialised!")
     def reorder(list, order):
         return [list[i] for i in order]
-    def generate_harmonics(self, times, data, func=None):
-        if func==None:
+    def generate_harmonics(self, times, data, **kwargs):
+        if "func" not in kwargs:
             func=self.empty
+        else:
+            func=kwargs["func"]
+        if "hanning" not in kwargs:
+            kwargs["hanning"]=False
+
         L=len(data)
-        window=np.hanning(L)
-        time_series=np.multiply(data, window)
+        if kwargs["hanning"]==True:
+            window=np.hanning(L)
+            time_series=np.multiply(data, window)
+        else:
+            time_series=data
         f=np.fft.fftfreq(len(time_series), times[1]-times[0])
         Y=np.fft.fft(time_series)
         last_harm=(self.harmonics[-1]*self.input_frequency)

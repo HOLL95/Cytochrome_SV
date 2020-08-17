@@ -3,7 +3,6 @@ import numpy as np
 import itertools
 import copy
 import math
-import matplotlib.pyplot as plt
 class dispersion:
     def __init__(self, simulation_options, optim_list):
         self.simulation_options=simulation_options
@@ -15,6 +14,8 @@ class dispersion:
         if len(self.simulation_options["dispersion_distributions"])!=len(self.simulation_options["dispersion_parameters"]):
             print("Dipersion distributions are " ,self.simulation_options["dispersion_distributions"],"dispersion parameters are ",self.simulation_options["dispersion_parameters"])
             raise ValueError("Need to define distributions for each parameter")
+        if type(self.simulation_options["dispersion_bins"]) is not list:
+            self.simulation_options["dispersion_bins"]=[self.simulation_options["dispersion_bins"]]
         for i in range(0, len(self.simulation_options["dispersion_parameters"])):
             if self.simulation_options["dispersion_distributions"][i]=="uniform":
                 if (self.simulation_options["dispersion_parameters"][i]+"_lower" not in optim_list) or (self.simulation_options["dispersion_parameters"][i]+"_upper" not in optim_list):
@@ -61,6 +62,7 @@ class dispersion:
                     param_loc=0
                     param_shape=nd_dict[self.simulation_options["dispersion_parameters"][i]+"_shape"]
                     param_scale=nd_dict[self.simulation_options["dispersion_parameters"][i]+"_scale"]
+                    print("shape, scale", param_shape, param_scale)
                     min_val=lognorm.ppf(1e-4, param_shape, loc=param_loc, scale=param_scale)
                     max_val=lognorm.ppf(1-1e-4, param_shape, loc=param_loc, scale=param_scale)
                     param_vals=np.linspace(min_val, max_val, self.simulation_options["dispersion_bins"][i])

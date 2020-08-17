@@ -119,7 +119,7 @@ for harmonic in range(3, 7):
         "k0_range":[1e2, 1e4],
         'phase' : [math.pi, 2*math.pi],
         }
-
+    print(param_list["E_start"],param_list["E_reverse"] )
     cyt=single_electron(None, param_list, simulation_options, other_values, param_bounds)
     print(cyt.nd_param.c_I0)
     cyt.define_boundaries(param_bounds)

@@ -8,7 +8,7 @@ unit_dict={
     'E_reverse': "V",
     'omega':"Hz",#8.88480830076,  #    (frequency Hz)
     'd_E': "V",   #(ac voltage amplitude - V) freq_range[j],#
-    'v': '$s^{-1}$',   #       (scan rate s^-1)
+    'v': '$V s^{-1}$',   #       (scan rate s^-1)
     'area': '$cm^{2}$', #(electrode surface area cm^2)
     'Ru': "$\\Omega$",  #     (uncompensated resistance ohms)
     'Cdl': "F", #(capacitance parameters)
@@ -22,6 +22,7 @@ unit_dict={
     "E0_mean":"V",
     "E0_std": "V",
     "k0_shape":"",
+    "sampling_freq":"$s^{-1}$",
     "k0_loc":"",
     "k0_scale":"",
     "cap_phase":"rads",
@@ -57,15 +58,17 @@ fancy_names={
     "alpha_mean": "$\\alpha\\mu$",
     "alpha_std": "$\\alpha\\sigma$",
     'phase' : "Phase",
+    "sampling_freq":"Sampling rate",
     "":"Experiment",
     "noise":"$\sigma$",
     "error":"RMSE",
 }
 
-optim_list=["","E_0","k0_scale", "k0_shape","Ru","Cdl","CdlE1","gamma","phase", "alpha"]
+optim_list=["","E_start", "E_reverse", "E_0","k_0","Ru","Cdl","gamma", "alpha", "v", "omega", "phase","d_E","sampling_freq", "area"]
 name_list=[fancy_names[x] for x in optim_list]
 values=[
-    [-0.2, 10, 0.25, 0.0, 1e-05, 0, 1e-10, 0.0, 0.5]
+    [-0.7, 0.1, -0.25, 100, 0.0, 1e-05, 1e-10, 0.5, 1, 10, 0.0, 0.15, 1/0.0025, 0.07]
+
 ]
 parameter_orientation="row"
 param_num=len(name_list)+1

@@ -80,6 +80,7 @@ class params:
         elif flag == 'non_dim':
             self.param_dict["E_reverse"]=value/self.c_E0
     def omega_d(self, value, flag):
+
         if flag=='re_dim':
             self.param_dict["omega"]=value/(2*math.pi*self.c_T0)
         elif flag == 'non_dim':
@@ -100,6 +101,7 @@ class params:
         elif flag == 'non_dim':
             self.param_dict["gamma"]=value/self.c_Gamma
     def sf(self, value, flag):
+
         if flag=='re_dim':
             self.param_dict["sampling_freq"]=value/((2*math.pi)/self.param_dict["nd_omega"])
         elif flag == 'non_dim':

@@ -18,6 +18,8 @@ class multiplot:
             kwargs["orientation"]="portrait"
         if "row_spacing" not in kwargs:
             kwargs["row_spacing"]=1
+        if "harmonic_spacing" not in kwargs:
+            kwargs["harmonic_spacing"]=kwargs["row_spacing"]
         if "font_size" not in kwargs:
             mpl.rcParams["font.size"]=10
         else:
@@ -66,7 +68,7 @@ class multiplot:
                     for q in range(0, kwargs["num_harmonics"]*num_cols):
                         rowspan=kwargs["plot_height"]
                         colspan=kwargs["plot_width"]
-                        loc=(i*(kwargs["num_harmonics"]+kwargs["row_spacing"])+(q%kwargs["num_harmonics"]),int(np.floor(q/kwargs["num_harmonics"]))*(kwargs["plot_width"]+kwargs["col_spacing"]))
+                        loc=(i*(kwargs["num_harmonics"]+kwargs["harmonic_spacing"])+(q%kwargs["num_harmonics"]),int(np.floor(q/kwargs["num_harmonics"]))*(kwargs["plot_width"]+kwargs["col_spacing"]))
                         """
                         x position is calculated as the row (i)*total row width (number of harmonics + spacing) and then the position within the row
                         which will be (e.g. 1, 2, 3, 1,2, 3 for N=3)
@@ -124,7 +126,7 @@ class multiplot:
                 if i in kwargs["harmonic_position"]:
                     for j in range(0, num_rows):
                         for q in range(0, kwargs["num_harmonics"]):
-                            loc=(j*(kwargs["num_harmonics"]+kwargs["row_spacing"])+q,i*(kwargs["plot_width"]+kwargs["col_spacing"]))
+                            loc=(j*(kwargs["num_harmonics"]+kwargs["harmonic_spacing"])+q,i*(kwargs["plot_width"]+kwargs["col_spacing"]))
                             rowspan=kwargs["plot_height"]
                             colspan=kwargs["plot_width"]
                             subplotspec=gridspecification.new_subplotspec(loc, rowspan, colspan)
