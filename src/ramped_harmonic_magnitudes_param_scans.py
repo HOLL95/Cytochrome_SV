@@ -9,15 +9,27 @@ import math
 import copy
 import pints
 from single_e_class_unified import single_electron
-import matplotlib
 from matplotlib.ticker import FormatStrFormatter
 directory=os.getcwd()
 dir_list=directory.split("/")
-data_loc=("/").join(dir_list[:-1])+"/Experiment_data/SV"
+data_loc=("/").join(dir_list[:-1])+"/Experiment_data/Ramped"
 files=os.listdir(data_loc)
-scan="3"
-freq="_9_"
-dec_amount=8
+harm_range=list(range(1,9,1))
+num_harms=len(harm_range)+1
+scan="_1_"
+freq="_9Hz"
+dec_amount=1
+def flatten(something):
+    if isinstance(something, (list, tuple, set, range)):
+        for sub in something:
+            yield from flatten(sub)
+    elif isinstance(something, dict):
+        for key in something.keys():
+            yield from flatten(something[key])
+    else:
+        yield something
+
+
 for file in files:
     if scan in file and freq in file:
 
@@ -32,28 +44,12 @@ except:
     raise ValueError("No current file of that scan and frequency found")
 try:
     voltage_results1=voltage_data[0::dec_amount,1]
-
 except:
     raise ValueError("No voltage file of that scan and frequency found")
-harm_range=list(range(3,8,2))
-num_harms=len(harm_range)+1
-figure=multiplot(3, 2, **{"distribution_position":list(range(0,3)), "num_harmonics":num_harms, "orientation":"landscape",  "plot_width":5, "row_spacing":1,"col_spacing":2, "plot_height":1})
-for j in range(2, 4):
-    figure.axes_dict["row3"][j].set_axis_off()
-
-def flatten(something):
-    if isinstance(something, (list, tuple, set, range)):
-        for sub in something:
-            yield from flatten(sub)
-    elif isinstance(something, dict):
-        for key in something.keys():
-            yield from flatten(something[key])
-    else:
-        yield something
 regime="reversible"
 regime="irreversible"
 for regime in ["reversible", "irreversible"]:
-    figure=multiplot(3, 2, **{"distribution_position":list(range(0,3)), "num_harmonics":num_harms, "orientation":"landscape",  "plot_width":5, "row_spacing":1,"col_spacing":2, "plot_height":1})
+    figure=multiplot(3, 2, **{"distribution_position":list(range(0,3)), "num_harmonics":3, "orientation":"landscape",  "plot_width":5, "row_spacing":1,"col_spacing":2, "plot_height":1})
     for j in range(2, 4):
         figure.axes_dict["row3"][j].set_axis_off()
     if regime=="reversible":
@@ -130,11 +126,11 @@ for regime in ["reversible", "irreversible"]:
     }
     param_list={
         "E_0":-0.25,
-        'E_start':  -0.5, #(starting dc voltage - V)
-        'E_reverse':0.1,
-        'omega':8.940960632790196,#8.88480830076,  #    (frequency Hz)
-        "original_omega":8.940960632790196,
-        'd_E': 300e-3,   #(ac voltage amplitude - V) freq_range[j],#
+        'E_start':  -500e-3, #(starting dc voltage - V)
+        'E_reverse':100e-3,
+        'omega':8.881077023434541,#8.88480830076,  #    (frequency Hz)
+        "v":    22.35174e-3,
+        'd_E': 150e-3,   #(ac voltage amplitude - V) freq_range[j],#
         'area': 0.07, #(electrode surface area cm^2)
         'Ru': 0.0,  #     (uncompensated resistance ohms)
         'Cdl': 1e-5, #(capacitance parameters)
@@ -150,11 +146,11 @@ for regime in ["reversible", "irreversible"]:
         "E0_skew":0,
         "k0_shape":0.25,
         "k0_scale":k0_val,
-        "cap_phase":3*math.pi/2,
+        "cap_phase":0,
         "alpha_mean":0.5,
         "alpha_std":1e-3,
         'sampling_freq' : (1.0/400),
-        'phase' :3*math.pi/2,
+        'phase' :0.0,
         "time_end": None,
         'num_peaks': 30,
     }
@@ -168,7 +164,7 @@ for regime in ["reversible", "irreversible"]:
         "dispersion":False,
         "dispersion_bins":16,
         "test": False,
-        "method": "sinusoidal",
+        "method": "ramped",
         "phase_only":False,
         "likelihood":likelihood_options[1],
         "numerical_method": solver_list[1],
@@ -177,7 +173,7 @@ for regime in ["reversible", "irreversible"]:
     }
     other_values={
         "filter_val": 0.5,
-        "harmonic_range":list(range(3, 8)),
+        "harmonic_range":harm_range,
         "experiment_time": time_results1,
         "experiment_current": current_results1,
         "experiment_voltage":voltage_results1,
@@ -205,12 +201,13 @@ for regime in ["reversible", "irreversible"]:
         "k0_range":[1e2, 1e4],
         'phase' : [0, 2*math.pi],
     }
-    table_params=["E_start", "E_reverse", "E_0","k_0","Ru","Cdl","gamma", "alpha", "v", "omega", "phase","d_E","sampling_freq", "area"]
+    table_params=["E_start", "E_reverse", "E_0","k_0","Ru","Cdl","gamma", "alpha", "v", "omega", "phase","d_E","sampling_freq", "area", "E0_mean", "E0_std", "E0_skew", "k0_shape", "k0_scale"]
 
     cyt=single_electron(None, param_list, simulation_options, other_values, param_bounds)
     print([cyt.dim_dict[x] if x in cyt.dim_dict else 0 for x in table_params])
     original_params=list(params.keys())
-
+    table_params=["E_0","k0_scale", "k0_shape","Ru","Cdl","CdlE1","gamma","phase", "alpha"]
+    print([param_list[x] for x in table_params])
     cyt.def_optim_list(original_params)
     no_disp=cyt.test_vals([0.2, 100], "timeseries")
     harms=harmonics(cyt.other_values["harmonic_range"], cyt.dim_dict["omega"], 0.5)
@@ -218,7 +215,7 @@ for regime in ["reversible", "irreversible"]:
     current_results=cyt.i_nondim(cyt.other_values["experiment_current"])
     voltage_results=cyt.e_nondim(cyt.other_values["experiment_voltage"])
     no_disp_harmonics=harms.generate_harmonics(time_results, cyt.i_nondim(no_disp))
-    cyt.simulation_options["dispersion_bins"]=[50]
+    cyt.simulation_options["dispersion_bins"]=[16]
     cyt.simulation_options["GH_quadrature"]=False
     def e0_re_dim(arg):
         return np.multiply(arg, cyt.nd_param.c_E0)
@@ -265,11 +262,13 @@ for regime in ["reversible", "irreversible"]:
                 axis_position=1+(2*plot_locs[parameter][disp_param]["col"])
                 axis_row=figure.axes_dict[plot_locs[parameter][disp_param]["row"]]
                 current_ax=axis_row[axis_position]
-                volts=cyt.e_nondim(cyt.define_voltages()[cyt.time_idx])
-                current_ax.plot(volts, syn_time)# alpha=1-(0.1*i)
+                times=cyt.t_nondim(cyt.time_vec[cyt.time_idx])
+                syn_harmonics=harms.generate_harmonics(times, cyt.i_nondim(syn_time*1e6), hanning=True)
+                y_plot=[max(abs(syn_harmonics[i,:])) for i in range(0, len(syn_harmonics))]
+                current_ax.semilogy(harm_range, y_plot)# alpha=1-(0.1*i)
                 current_ax.yaxis.set_major_locator(plt.MaxNLocator(3))
                 current_ax.set_ylabel("Current($mA$)")
-                current_ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
+                #current_ax.yaxis.set_major_formatter(FormatStrFormatter('%.2e'))
 
 
 

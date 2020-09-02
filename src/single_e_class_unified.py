@@ -101,6 +101,7 @@ class single_electron:
                 self.nd_param.nd_param_dict["time_end"]=(self.nd_param.nd_param_dict["num_peaks"])#/self.nd_param.nd_param_dict["omega"])
             else:
                 self.nd_param.nd_param_dict["time_end"]=(2*(self.dim_dict["E_reverse"]-self.dim_dict["E_start"])/self.dim_dict["v"])/self.nd_param.c_T0#DIMENSIONAL
+                print(self.nd_param.nd_param_dict["time_end"], "TIMES")
             self.times()
             if self.simulation_options["no_transient"]!=False:
                     transient_time=self.t_nondim(self.time_vec)

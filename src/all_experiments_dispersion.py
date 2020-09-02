@@ -7,6 +7,7 @@ import os
 import sys
 import math
 import copy
+import time
 import pints
 from single_e_class_unified import single_electron
 from matplotlib.ticker import FormatStrFormatter
@@ -199,10 +200,10 @@ SV_param_list=copy.deepcopy(RV_param_list)
 DCV_param_list=copy.deepcopy(RV_param_list)
 DCV_param_list["v"]=1
 changed_SV_params=["d_E", "phase", "cap_phase", "num_peaks", "original_omega", "sampling_freq"]
-changed_sv_vals=[300e-3, 3*math.pi/2,  3*math.pi/2, 25, RV_param_list["omega"], 1/1000.0]
+changed_sv_vals=[300e-3, 3*math.pi/2,  3*math.pi/2, 25, RV_param_list["omega"], 1/200.0]
 for key, value in zip(changed_SV_params, changed_sv_vals):
     SV_param_list[key]=value
-disp_bin_val=16
+disp_bin_val=1
 SV_simulation_options["method"]="sinusoidal"
 other_values={
     "filter_val": 0.5,
@@ -229,8 +230,8 @@ def trumpet_plots(old_class, DCV_scan_rate, sim_params):
         new_param_list["sampling_freq"]=new_param_list["sampling_freq"]/DCV_scan_rate[q]
         DCV_new=single_electron(None, new_param_list, new_sim_options, old_class.other_values, old_class.param_bounds)
         DCV_new.def_optim_list(old_class.optim_list)
-        syn_time=DCV_new.i_nondim(DCV_new.test_vals(sim_params, "timeseries"))*1e3
-        volts=DCV_new.define_voltages()
+        syn=DCV_new.test_vals(sim_params, "timeseries")
+        syn_time=DCV_new.i_nondim(syn)*1e3
         peak_pos[0][q]=DCV_new.e_nondim(volts[np.where(syn_time==max(syn_time))])
         peak_pos[1][q]=DCV_new.e_nondim(volts[np.where(syn_time==min(syn_time))])
     return peak_pos
@@ -238,7 +239,9 @@ for i in range(0, len(exp_keys)):
 
     experiment_type=exp_keys[i]
     current_class=exp_class_dict[experiment_type]
-    non_disped_time=current_class.i_nondim(current_class.test_vals([], "timeseries"))
+    longs="~"*50
+    ts=current_class.test_vals([], "timeseries")
+    non_disped_time=current_class.i_nondim(ts)
     if experiment_type=="dcv":
         non_disped_trumpet=trumpet_plots(current_class, DCV_scan_rate, [])
     if experiment_type=="ramped":
@@ -250,7 +253,10 @@ for i in range(0, len(exp_keys)):
         current_class.simulation_options["dispersion_bins"]=[disp_bin_val]*len(parameters[j])
         current_class.def_optim_list(optim_list)
         params=[RV_param_list[key] for key in optim_list]
+        start=time.time()
         syn_time=current_class.i_nondim(current_class.test_vals(params, "timeseries"))
+        print(time.time()-start)
+        print(experiment_type, longs)
         if experiment_type=="dcv":
             disped_trumpet=trumpet_plots(current_class, DCV_scan_rate, params)
         if parameters[j]==["E_0"]:
