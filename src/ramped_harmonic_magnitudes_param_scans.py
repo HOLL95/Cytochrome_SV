@@ -267,13 +267,13 @@ for regime in ["reversible", "irreversible"]:
                 y_plot=[max(abs(syn_harmonics[i,:])) for i in range(0, len(syn_harmonics))]
                 current_ax.semilogy(harm_range, y_plot)# alpha=1-(0.1*i)
                 current_ax.yaxis.set_major_locator(plt.MaxNLocator(3))
-                current_ax.set_ylabel("Current($mA$)")
+                current_ax.set_ylabel(" Max current($mA$)")
                 #current_ax.yaxis.set_major_formatter(FormatStrFormatter('%.2e'))
 
 
 
                 if plot_locs[parameter][disp_param]["col_end"]==True:
-                    current_ax.set_xlabel("Voltage(V)")
+                    current_ax.set_xlabel("Harmonic number")
                 else:
                     current_ax.set_xticklabels([])
             disp_xlim=disp_ax.get_xlim()

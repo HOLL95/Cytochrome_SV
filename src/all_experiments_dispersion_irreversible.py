@@ -258,12 +258,8 @@ for i in range(0, len(exp_keys)):
         syn_time=current_class.i_nondim(current_class.test_vals(params, "timeseries"))
         print(time.time()-start)
         print(experiment_type, longs)
-        if experiment_type=="dcv":
-            disped_trumpet=trumpet_plots(current_class, DCV_scan_rate, params)
         if parameters[j]==["E_0"]:
             e0_plot=syn_time
-            if experiment_type=="dcv":
-                e0_trumpet=disped_trumpet
         if experiment_type=="ramped":
             times=current_class.t_nondim(current_class.time_vec[current_class.time_idx])
             harms=harmonics(harm_range, current_class.dim_dict["omega"], 0.05)
@@ -289,25 +285,6 @@ for i in range(0, len(exp_keys)):
                 if parameters[j]==["E_0", "k_0"]:
                     current_ax.plot(times, e0_harms[q, :]*1e6)
                 current_ax.plot(times, syn_harmonics[q, :]*1e6)
-        elif experiment_type=="dcv" and parameters[j]!=["E_0"]:
-            current_ax=figure.axes_dict["row"+str(i+1)][j]
-            plot_vs=np.log10(DCV_scan_rate)
-            current_ax.scatter(plot_vs, non_disped_trumpet[0,:], color=get_colours[0], marker="D", s=5, label="Oxidation V")
-            current_ax.scatter(plot_vs, non_disped_trumpet[1,:],color=get_colours[0], s=5, label="Reduction V")
-            leg=current_ax.legend(loc="upper left",fontsize=8, frameon=False)
-            for lcv in range(0, len(leg.legendHandles)):
-                leg.legendHandles[lcv].set_color("black")
-            if parameters[j]==["E_0", "k_0"]:
-                current_ax.scatter(plot_vs, e0_trumpet[0,:], color=get_colours[1], marker="D", s=5)
-                current_ax.scatter(plot_vs, e0_trumpet[1,:],color=get_colours[1], s=5)
-                current_ax.scatter(plot_vs, disped_trumpet[0,:],color=get_colours[2], marker="D", s=5)
-                current_ax.scatter(plot_vs, disped_trumpet[1,:],color=get_colours[2], s=5)
-            else:
-                current_ax.scatter(plot_vs, disped_trumpet[0,:],color=get_colours[1], marker="D", s=5)
-                current_ax.scatter(plot_vs, disped_trumpet[1,:],color=get_colours[1], s=5)#
-            current_ax.set_xlabel("Log(v)")
-            current_ax.set_ylabel("Peak position")
-            current_ax.yaxis.set_major_formatter(FormatStrFormatter('%.2f'))
 
         else:
             volts=current_class.e_nondim(current_class.define_voltages()[current_class.time_idx])

@@ -7,6 +7,7 @@ import os
 import math
 import copy
 import pints
+import time
 from single_e_class_unified import single_electron
 from scipy.integrate import odeint
 directory=os.getcwd()
@@ -100,13 +101,13 @@ for harmonic in range(3, 7):
     param_bounds={
         'E_0':[-0.3,-0.2],
         'omega':[0.95*param_list['omega'],1.05*param_list['omega']],#8.88480830076,  #    (frequency Hz)
-        'Ru': [0, 1e5],  #     (uncompensated resistance ohms)
+        'Ru': [0, 1e3],  #     (uncompensated resistance ohms)
         'Cdl': [0,2e-3], #(capacitance parameters)
         'CdlE1': [-0.01,0.01],#0.000653657774506,
         'CdlE2': [-0.01,0.01],#0.000245772700637,
         'CdlE3': [-0.01,0.01],#1.10053945995e-06,
         'gamma': [0.1*param_list["original_gamma"],10*param_list["original_gamma"]],
-        'k_0': [0.1, 1e4], #(reaction rate s-1)
+        'k_0': [0.1, 1e3], #(reaction rate s-1)
         'alpha': [0.4, 0.6],
         "cap_phase":[math.pi/2, 2*math.pi],
         "E0_mean":[-0.3,-0.2],
@@ -126,12 +127,15 @@ for harmonic in range(3, 7):
     time_results=cyt.other_values["experiment_time"]
     current_results=cyt.other_values["experiment_current"]
     voltage_results=cyt.other_values["experiment_voltage"]
+    start=time.time()
+    cyt.test_vals([], "timeseries")
+    print("TIME", time.time()-start, len(voltage_results))
     #plt.plot(time_results, current_results)
     cyt.dim_dict["noise"]=0
     cyt.dim_dict["phase"]=3*math.pi/2
     print(len(current_results))
     #cyt.def_optim_list(["E_0","k0_shape", "k0_scale","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","cap_phase","phase", "alpha"])
-    cyt.simulation_options["dispersion_bins"]=[20]
+    cyt.simulation_options["dispersion_bins"]=[2]
     cyt.simulation_options["GH_quadrature"]=False
     cyt.def_optim_list(["E0_mean", "E0_std","k_0","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","cap_phase","phase", "alpha"])
     reduced_list=["E_0","k_0","Ru","gamma","omega","cap_phase","phase", "alpha"]

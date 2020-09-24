@@ -48,7 +48,7 @@ except:
     raise ValueError("No voltage file of that scan and frequency found")
 
 regime="irreversible"
-for regime in ["irreversible", "reversible"]:
+for regime in np.flip(["irreversible", "reversible"]):
     figure=multiplot(3,2, **{"harmonic_position":list(range(0, 3)), "num_harmonics":num_harms, "orientation":"landscape",  "plot_width":5,"plot_height":3, "row_spacing":1,"col_spacing":1, "plot_height":1})
     for j in range(num_harms, 2*num_harms):
         figure.axes_dict["row3"][j].set_axis_off()
@@ -77,7 +77,7 @@ for regime in ["irreversible", "reversible"]:
         'CdlE2': "",#0.000245772700637,
         'CdlE3': "",#1.10053945995e-06,
         'gamma': 'mol cm^{-2}$',
-        'k_0': 's^{-1}$', #(reaction rate s-1)
+        'k_0': '$s^{-1}$', #(reaction rate s-1)
         'alpha': "",
         'E0_skew':"",
         "E0_mean":"V",
@@ -107,8 +107,8 @@ for regime in ["irreversible", "reversible"]:
         'CdlE2': "$C_{dlE2}$",#0.000245772700637,
         'CdlE3': "$C_{dlE3}$",#1.10053945995e-06,
         'gamma': '$\\Gamma',
-        'E0_skew':"$E^0 \\alpha$",
-        'k_0': '$k_0', #(reaction rate s-1)
+        'E0_skew':"$E^0 \\kappa$",
+        'k_0': '$k_0$', #(reaction rate s-1)
         'alpha': "$\\alpha$",
         "E0_mean":"$E^0 \\mu$",
         "E0_std": "$E^0 \\sigma$",
@@ -262,12 +262,12 @@ for regime in ["irreversible", "reversible"]:
                 disp_ax.xaxis.tick_top()
                 disp_ax.set_xlabel(fancy_names[parameter]+"("+unit_dict[parameter]+")")
                 disp_ax.xaxis.set_label_position('top')
-                disp_ax.set_ylabel("PD")
+                disp_ax.set_ylabel("$f($"+fancy_names[parameter]+"$)$")
                 for j in range(0, len(syn_harmonics)):
                     axis_position=(1+j)+(num_harms*plot_locs[parameter][disp_param]["col"])
                     axis_row=figure.axes_dict[plot_locs[parameter][disp_param]["row"]]
                     current_ax=axis_row[axis_position]
-                    current_ax.plot(time_results, (syn_harmonics[j,:]), alpha=1-(0.1*i))
+                    current_ax.plot(time_results, abs(syn_harmonics[j,:]), alpha=1-(0.1*i))
                     current_ax.yaxis.set_major_locator(plt.MaxNLocator(3))
                     current_ax.text(0.9, 0.8,harm_range[j],
                     horizontalalignment='center',
@@ -292,9 +292,9 @@ for regime in ["irreversible", "reversible"]:
     plt.subplots_adjust(top=0.94,
                         bottom=0.06,
                         left=0.12,
-                        right=0.975,
+                        right=0.985,
                         hspace=0.115,
-                        wspace=0.6)
+                        wspace=0.7)
     fig.set_size_inches((7, 9))
     save_path="ramped_harmonic_parameter_scans_"+regime+".png"
     plt.show()

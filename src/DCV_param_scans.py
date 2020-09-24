@@ -77,7 +77,7 @@ for regime in ["reversible", "irreversible"]:
         'CdlE2': "",#0.000245772700637,
         'CdlE3': "",#1.10053945995e-06,
         'gamma': 'mol cm^{-2}$',
-        'k_0': 's^{-1}$', #(reaction rate s-1)
+        'k_0': '$s^{-1}$', #(reaction rate s-1)
         'alpha': "",
         'E0_skew':"",
         "E0_mean":"V",
@@ -107,8 +107,8 @@ for regime in ["reversible", "irreversible"]:
         'CdlE2': "$C_{dlE2}$",#0.000245772700637,
         'CdlE3': "$C_{dlE3}$",#1.10053945995e-06,
         'gamma': '$\\Gamma',
-        'E0_skew':"$E^0 \\alpha$",
-        'k_0': '$k_0', #(reaction rate s-1)
+        'E0_skew':"$E^0 \\kappa$",
+        'k_0': '$k_0$', #(reaction rate s-1)
         'alpha': "$\\alpha$",
         "E0_mean":"$E^0 \\mu$",
         "E0_std": "$E^0 \\sigma$",
@@ -271,7 +271,7 @@ for regime in ["reversible", "irreversible"]:
                 disp_ax.xaxis.tick_top()
                 disp_ax.set_xlabel(fancy_names[parameter]+"("+unit_dict[parameter]+")")
                 disp_ax.xaxis.set_label_position('top')
-                disp_ax.set_ylabel("PD")
+                disp_ax.set_ylabel("$f($"+fancy_names[parameter]+"$)$")
                 axis_position=1+(2*plot_locs[parameter][disp_param]["col"])
                 axis_row=figure.axes_dict[plot_locs[parameter][disp_param]["row"]]
                 current_ax=axis_row[axis_position]
