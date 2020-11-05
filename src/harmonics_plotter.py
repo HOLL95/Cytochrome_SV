@@ -1,5 +1,6 @@
 import numpy as np
 import copy
+import matplotlib.pyplot as plt
 class harmonics:
     def __init__(self, harmonics, input_frequency, filter_val):
         self.harmonics=harmonics
@@ -10,7 +11,7 @@ class harmonics:
     def reorder(list, order):
         return [list[i] for i in order]
     def generate_harmonics(self, times, data, **kwargs):
-        if "func" not in kwargs:
+        if "func" not in kwargs or kwargs["func"]==None:
             func=self.empty
         else:
             func=kwargs["func"]
@@ -83,24 +84,6 @@ class harmonics:
                 box_area[extended_peak_idx]=max(fft_plot[peak_idx])
             ax.plot(extended_frequencies, box_area, color="r", linestyle="--")
 
-    def plot_harmonics(self, times, method, **kwargs):
-        if method=="abs":
-            a=abs
-        else:
-            a=self.empty
-        harmonics_list=[]
-        harmonics_labels=[]
-        for key, value in list(kwargs.items()):
-            harmonics_list.append(value)
-            harmonics_labels.append(key)
-        fig, ax=plt.subplots(self.num_harmonics,1)
-        for i in range(0, self.num_harmonics):
-            for j in range(0, len(harmonics_labels)):
-                    ax[i].plot(times, a(harmonics_list[j][i,:]), label=harmonics_labels[j])
-        ax[i].yaxis.set_label_position("right")
-        ax[i].set_ylabel(str(self.harmonics[i]), rotation=0)
-        plt.legend()
-        plt.show()
 
     def harmonics_plus(self, title, method, times, **kwargs):
         plt.rcParams.update({'font.size': 12})
@@ -155,4 +138,46 @@ class harmonics:
         plt.legend()
         plt.suptitle(title)
         plt.subplots_adjust(left=0.08, bottom=0.09, right=0.95, top=0.92, wspace=0.23)
+        plt.show()
+    def plot_harmonics(self, times, **kwargs):
+        label_list=[]
+        time_series_dict={}
+        harm_dict={}
+        if "hanning" not in kwargs:
+            kwargs["hanning"]=False
+        if "xaxis" not in kwargs:
+            kwargs["xaxis"]=times
+        if "alpha_increment" not in kwargs:
+            kwargs["alpha_increment"]=0
+        if "plot_func" not in kwargs:
+            kwargs["plot_func"]=np.real
+        if "fft_func" not in kwargs:
+            kwargs["fft_func"]=None
+        label_counter=0
+
+        for key in kwargs:
+            if "time_series" in key:
+                print(key)
+                index=key.find("time_series")
+                if key[index]=="_" or key[index]=="-":
+                    index-=1
+                label_list.append(key[:index])
+
+                time_series_dict[key[:index]]=kwargs[key]
+
+                label_counter+=1
+
+        if label_counter==0:
+            return
+        for label in label_list:
+            harm_dict[label]=self.generate_harmonics(times, time_series_dict[label], hanning=kwargs["hanning"], func=kwargs["fft_func"])
+        num_harms=self.num_harmonics
+        for i in range(0, num_harms):
+            plt.subplot(num_harms, 1,i+1)
+            plot_counter=0
+            for plot_name in label_list:
+                plt.plot(kwargs["xaxis"], kwargs["plot_func"](harm_dict[plot_name][i,:]), label=plot_name, alpha=1-(plot_counter*kwargs["alpha_increment"]))
+                plot_counter+=1
+            if i==0:
+                plt.legend()
         plt.show()

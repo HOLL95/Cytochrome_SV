@@ -28,6 +28,7 @@ class single_electron:
         else:
             self.file_init=False
         simulation_options=self.options_checker(simulation_options)
+
         required_params=set(["E_0", "k_0", "alpha", "gamma", "Ru", "Cdl", "CdlE1","CdlE2","CdlE3", "E_start", \
                             "E_reverse", "omega", "phase", "d_E"])
         param_set=set(dim_parameter_dictionary.keys())
@@ -43,6 +44,7 @@ class single_electron:
 
 
         self.simulation_options=simulation_options
+
         self.other_values=other_values
         self.optim_list=self.simulation_options["optim_list"]
         self.harmonic_range=other_values["harmonic_range"]
@@ -58,19 +60,22 @@ class single_electron:
         last_point= (self.harmonic_range[-1]*self.nd_param.nd_param_dict["omega"])+(self.nd_param.nd_param_dict["omega"]*self.filter_val)
         self.test_frequencies=frequencies[np.where(self.frequencies<last_point)]
         self.boundaries=None
-        self.param_bounds=param_bounds
+        if param_bounds!={}:
+            self.param_bounds=param_bounds
         if self.simulation_options["experimental_fitting"]==True:
             self.secret_data_fourier=self.top_hat_filter(other_values["experiment_current"])
             self.secret_data_time_series=other_values["experiment_current"]
+
     def calculate_times(self,):
         self.dim_dict["tr"]=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
         if self.simulation_options["experimental_fitting"]==True:
             if self.simulation_options["method"]=="sinusoidal":
-                time_end=(self.nd_param.nd_param_dict["num_peaks"]/self.nd_param.nd_param_dict["omega"])
+                time_end=(self.nd_param.nd_param_dict["num_peaks"]/self.nd_param.nd_param_dict["original_omega"])
             elif self.simulation_options["method"]=="ramped":
                 time_end=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])*self.nd_param.c_T0
             elif self.simulation_options["method"]=="dcv":
                 time_end=2*(self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"])*self.nd_param.c_T0
+
             if self.simulation_options["no_transient"]!=False:
                 if self.simulation_options["no_transient"]>time_end:
                     warnings.warn("Previous transient removal method detected")
@@ -128,6 +133,28 @@ class single_electron:
         self.other_values["GH_dict"]=dict(zip(labels, [nodes, weights, normal_weights]))
     def define_boundaries(self, param_bounds):
         self.param_bounds=param_bounds
+    def voltage_query(self, time):
+        if self.simulation_options["method"]=="sinusoidal":
+                Et=isolver_martin_brent.et(self.nd_param.nd_param_dict["E_start"],self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], self.nd_param.nd_param_dict["d_E"], time)
+                dEdt=isolver_martin_brent.dEdt(self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], self.nd_param.nd_param_dict["d_E"], time)
+        elif self.simulation_options["method"]=="ramped":
+                Et=isolver_martin_brent.c_et(self.nd_param.nd_param_dict["E_start"], self.nd_param.nd_param_dict["E_reverse"], (self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]) ,self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], 1,self.nd_param.nd_param_dict["d_E"],time)
+                dEdt=isolver_martin_brent.c_dEdt(self.nd_param.nd_param_dict["tr"] ,self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], 1,self.nd_param.nd_param_dict["d_E"],time)
+        elif self.simulation_options["method"]=="dcv":
+                Et=isolver_martin_brent.dcv_et(self.nd_param.nd_param_dict["E_start"], self.nd_param.nd_param_dict["E_reverse"], (self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]) , 1,time)
+                dEdt=isolver_martin_brent.dcv_dEdt(self.nd_param.nd_param_dict["tr"],1,time)
+        return Et, dEdt
+    def current_ode_sys(self, state_vars, time):
+        current, theta, potential=state_vars
+        Et, dEdt=self.voltage_query(time)
+        Er=Et-(self.nd_param.nd_param_dict["Ru"]*current)
+        ErE0=Er-self.nd_param.nd_param_dict["E_0"]
+        alpha=self.nd_param.nd_param_dict["alpha"]
+        self.Cdlp=self.nd_param.nd_param_dict["Cdl"]*(1+self.nd_param.nd_param_dict["CdlE1"]*Er+self.nd_param.nd_param_dict["CdlE2"]*(Er**2)+self.nd_param.nd_param_dict["CdlE3"]*(Er**3))
+        d_thetadt=((1-theta)*self.nd_param.nd_param_dict["k_0"]*np.exp((1-alpha)*ErE0))-(theta*self.nd_param.nd_param_dict["k_0"]*np.exp((-alpha)*ErE0))
+        dIdt=(dEdt-(current/self.Cdlp)+self.nd_param.nd_param_dict["gamma"]*d_thetadt*(1/self.Cdlp))/self.nd_param.nd_param_dict["Ru"]
+        f=[dIdt, d_thetadt, dEdt]
+        return f
     def def_optim_list(self, optim_list):
         keys=list(self.dim_dict.keys())
         for i in range(0, len(optim_list)):
@@ -188,8 +215,6 @@ class single_electron:
             self.simulation_options["dispersion"]=False
         if "phase" in optim_list and "cap_phase" not in optim_list:
             self.simulation_options["phase_only"]=True
-        else:
-            self.simulation_options["phase_only"]=False
     def add_noise(self, series, sd):
         return np.add(series, np.random.normal(0, sd, len(series)))
     def normalise(self, norm, boundaries):
@@ -209,63 +234,7 @@ class single_electron:
             return 1
     def n_parameters(self):
         return len(self.optim_list)
-    def Armstrong_dcv_current(self, times, dcv_voltages):
-        T=(273+25)
-        F=96485.3328959
-        R=8.314459848
-        first_denom=(F**2*self.dim_dict["area"]*self.dim_dict["v"]*self.dim_dict["gamma"])/(R*T)
-        current=np.zeros(len(times))
-        for i in range(0, len(times)):
-            exponent=np.exp(F*(dcv_voltages[i]-self.dim_dict["E_0"])/(R*T))
-            current[i]=(exponent/(1+(exponent**2)))*first_denom
-        return current
-    def current_ode_sys(self, state_vars, time):
-        current, theta, potential=state_vars
-        if self.simulation_options["method"]=="sinusoidal":
-                Et=isolver_martin_brent.et(self.nd_param.nd_param_dict["E_start"],self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], self.nd_param.nd_param_dict["d_E"], time)
-                dEdt=isolver_martin_brent.dEdt(self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], self.nd_param.nd_param_dict["d_E"], time)
-        elif self.simulation_options["method"]=="ramped":
-                Et=isolver_martin_brent.c_et(self.nd_param.nd_param_dict["E_start"], self.nd_param.nd_param_dict["E_reverse"], (self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]) ,self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], 1,self.nd_param.nd_param_dict["d_E"],time)
-                dEdt=isolver_martin_brent.c_dEdt(self.nd_param.nd_param_dict["tr"] ,self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], 1,self.nd_param.nd_param_dict["d_E"],time)
-        elif self.simulation_options["method"]=="dcv":
-                Et=isolver_martin_brent.dcv_et(self.nd_param.nd_param_dict["E_start"], self.nd_param.nd_param_dict["E_reverse"], (self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]) , 1,time)
-                dEdt=isolver_martin_brent.dcv_dEdt(self.nd_param.nd_param_dict["tr"],1,time)
-        Er=Et-(self.nd_param.nd_param_dict["Ru"]*current)
-        ErE0=Er-self.nd_param.nd_param_dict["E_0"]
-        alpha=self.nd_param.nd_param_dict["alpha"]
-        self.Cdlp=self.nd_param.nd_param_dict["Cdl"]*(1+self.nd_param.nd_param_dict["CdlE1"]*Er+self.nd_param.nd_param_dict["CdlE2"]*(Er**2)+self.nd_param.nd_param_dict["CdlE3"]*(Er**3))
-        d_thetadt=((1-theta)*self.nd_param.nd_param_dict["k_0"]*np.exp((1-alpha)*ErE0))-(theta*self.nd_param.nd_param_dict["k_0"]*np.exp((-alpha)*ErE0))
-        dIdt=(dEdt-(current/self.Cdlp)+self.nd_param.nd_param_dict["gamma"]*d_thetadt*(1/self.Cdlp))/self.nd_param.nd_param_dict["Ru"]
-        f=[dIdt, d_thetadt, dEdt]
-        return f
-    #def adaptive_simulate
-    def system_jacobian(self, state_vars, time):
-        current, theta, potential=state_vars
-        if self.simulation_options["method"]=="sinusoidal":
-                Et=isolver_martin_brent.et(self.nd_param.nd_param_dict["E_start"],self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], self.nd_param.nd_param_dict["d_E"], time)
-                dEdt=isolver_martin_brent.dEdt(self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], self.nd_param.nd_param_dict["d_E"], time)
-        elif self.simulation_options["method"]=="ramped":
-                Et=isolver_martin_brent.c_et(self.nd_param.nd_param_dict["E_start"], self.nd_param.nd_param_dict["E_reverse"], (self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]) ,self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], 1,self.nd_param.nd_param_dict["d_E"],time)
-                dEdt=isolver_martin_brent.c_dEdt(self.nd_param.nd_param_dict["tr"] ,self.nd_param.nd_param_dict["nd_omega"], self.nd_param.nd_param_dict["phase"], 1,self.nd_param.nd_param_dict["d_E"],time)
-        elif self.simulation_options["method"]=="dcv":
 
-                Et=isolver_martin_brent.dcv_et(self.nd_param.nd_param_dict["E_start"], self.nd_param.nd_param_dict["E_reverse"], (self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]) , 1,time)
-                dEdt=isolver_martin_brent.dcv_dEdt(self.nd_param.nd_param_dict["tr"],1,time)
-        Er=Et-(self.nd_param.nd_param_dict["Ru"]*current)
-        ErE0=Er-self.nd_param.nd_param_dict["E_0"]
-        alpha=self.nd_param.nd_param_dict["alpha"]
-        exp11=self.nd_param.nd_param_dict["k_0"]*np.exp((1-alpha)*ErE0)
-        exp12=self.nd_param.nd_param_dict["k_0"]*np.exp((-alpha)*ErE0)
-        Cdlp=self.nd_param.nd_param_dict["Cdl"]*(1+self.nd_param.nd_param_dict["CdlE1"]*Er+self.nd_param.nd_param_dict["CdlE2"]*(Er**2)+self.nd_param.nd_param_dict["CdlE3"]*(Er**3))
-        jacobian=np.zeros((2, 2))
-        dtheta_dI=(-(1-theta)*(1-alpha)*exp11*self.nd_param.nd_param_dict["Ru"])-(theta*alpha*self.nd_param.nd_param_dict["Ru"]*exp12)
-        #dtheta_dE=((1-theta)*(1-alpha)*exp11)+(theta*alpha*exp12)
-        dtheta_dtheta=-exp11-exp12
-        jacobian[1, :]=[dtheta_dI, dtheta_dtheta]
-        jacobian[0, 0]=(-1/(self.nd_param.nd_param_dict["Ru"]*Cdlp))+(self.nd_param.nd_param_dict["gamma"]/Cdlp*self.nd_param.nd_param_dict["Ru"])*dtheta_dI
-        #jacobian[0, 1]=(self.nd_param.nd_param_dict["gamma"]/Cdlp*self.nd_param.nd_param_dict["Ru"])*dtheta_dE
-        jacobian[0, 1]=(self.nd_param.nd_param_dict["gamma"]/Cdlp*self.nd_param.nd_param_dict["Ru"])*dtheta_dtheta
-        return jacobian
     def define_voltages(self, transient=False):
         voltages=np.zeros(len(self.time_vec))
         if self.simulation_options["method"]=="sinusoidal":
@@ -319,7 +288,12 @@ class single_electron:
             results=np.zeros(len(top_hat), dtype=complex)
             results[freq_idx_1]=likelihood_1
             results[freq_idx_2]=likelihood_2
-        comp_results=np.append((np.real(results)), np.imag(results))
+        comp_results=np.real(np.fft.ifft(results))
+        #plt.plot(self.other_values["experiment_voltage"],comp_results)
+
+        #plt.plot(self.secret_data_time_series)
+        #plt.show()
+        #comp_results=np.append((np.real(results)), np.imag(results))
         return comp_results
     def abs_transform(self, data):
         window=np.hanning(len(data))
@@ -471,12 +445,15 @@ class single_electron:
             normed_params=self.change_norm_group(parameters, "un_norm")
         else:
             normed_params=copy.deepcopy(parameters)
-        print(normed_params, self.optim_list)
+        #print(normed_params, self.optim_list)
         for i in range(0, len(self.optim_list)):
             self.dim_dict[self.optim_list[i]]=normed_params[i]
         if self.simulation_options["phase_only"]==True:
             self.dim_dict["cap_phase"]=self.dim_dict["phase"]
+
         self.nd_param=params(self.dim_dict)
+        if self.simulation_options["voltage_only"]==True:
+            return self.define_voltages()[self.time_idx]
         if self.simulation_options["adaptive_ru"]==True:
             if self.dim_dict["Ru"]>1000:
                 self.simulation_options["numerical_method"]="pybamm"
@@ -506,6 +483,7 @@ class single_electron:
             if self.simulation_options["dispersion"]==True:
                 time_series=self.paralell_disperse(solver)
             else:
+                print("cap_phase", self.nd_param.nd_param_dict["cap_phase"])
                 time_series=solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val)
         time_series=np.array(time_series)
         if self.simulation_options["no_transient"]!=False:
@@ -564,6 +542,8 @@ class single_electron:
             simulation_options["adaptive_ru"]=False
         if "GH_quadrature" not in simulation_options:
             simulation_options["GH_quadrature"]=False
+        if "voltage_only" not in simulation_options:
+            simulation_options["voltage_only"]=False
         if "fourier_scaling" not in simulation_options:
             simulation_options["fourier_scaling"]=None
         if "multi_output" not in simulation_options:
