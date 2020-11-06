@@ -288,13 +288,13 @@ class single_electron:
             results=np.zeros(len(top_hat), dtype=complex)
             results[freq_idx_1]=likelihood_1
             results[freq_idx_2]=likelihood_2
-        comp_results=np.real(np.fft.ifft(results))
+        #comp_results=np.real(np.fft.ifft(results))
         #plt.plot(self.other_values["experiment_voltage"],comp_results)
 
         #plt.plot(self.secret_data_time_series)
         #plt.show()
         #comp_results=np.append((np.real(results)), np.imag(results))
-        return comp_results
+        return abs(results)
     def abs_transform(self, data):
         window=np.hanning(len(data))
         hanning_transform=np.multiply(window, data)

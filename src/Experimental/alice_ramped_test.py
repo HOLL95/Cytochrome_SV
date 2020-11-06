@@ -74,7 +74,7 @@ for i in range(1, 3):
         "test": False,
         "method": "ramped",
         "phase_only":False,
-        "likelihood":likelihood_options[0],
+        "likelihood":likelihood_options[1],
         "numerical_method": solver_list[1],
         "label": "MCMC",
         "optim_list":[]
@@ -103,7 +103,7 @@ for i in range(1, 3):
         'k_0': [0.1, 1e3], #(reaction rate s-1)
         'alpha': [0.4, 0.6],
         "cap_phase":[math.pi/2, 2*math.pi],
-        "E0_mean":[param_list["E_reverse"],param_list["E_start"]],
+        "E0_mean":[-0.1, 0.0],
         "E0_std": [1e-4,  0.1],
         "E0_skew": [-10, 10],
         "alpha_mean":[0.4, 0.65],
@@ -123,16 +123,14 @@ for i in range(1, 3):
     h_class=harmonics(other_values["harmonic_range"], param_list["omega"]*cyt.nd_param.c_T0, 0.05)
     h_class.plot_harmonics(time_results, experimental_time_series=current_results, hanning=True, plot_func=abs)
     volts=cyt.define_voltages()
-    plt.plot(cyt.time_vec, cyt.e_nondim(volts)*1e3)
-    plt.plot(time_results, cyt.e_nondim(voltage_results)[cyt.time_idx]*1e3)
-    plt.show()
+
 
     cyt.def_optim_list(["E_0","k_0","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","phase", "alpha"])
     inferred_params=[-0.3353782900811744, 330.32351080703046, 1.782826365614962e-11, 0.00012080435738781963, 0.0025267358958767356, 0.0006879410370079902, 1.9057794524924306e-11, param_list["omega"], 0, 0.4092580171166158]
     inferred_params=[0.0970288663866738, 362.510776540853, 9248.005110326583, 4.9897881784094635e-03, 0.09999999902298948*0, -0.005266814814752714, 2.9148497981974626e-11, param_list["omega"], 0, 0.5987156826440815]
     ramped_inferred=[-0.04485376873500503, 293.2567587982391, 146.0113118472105, 0.0001576519851347672, 0.006105674536299788, 0.0012649370988525588, 2.2215281961212185e-11, 8.959294996508683, 6.147649245979944, 0.5372803774088237]
     inferred_params=[-0.021495031150668878, 17.570527719697008, 1949.3033882011057, 0.0001576519851347672, 0.006105674536299788, 0.0012649370988525588, 2.2215281961212185e-10, 8.959294996508683, 6.147649245979944, 0.5372803774088237]
-    cmaes_test=cyt.test_vals(inferred_params, "timeseries")
+    cmaes_test=cyt.test_vals(ramped_inferred, "timeseries")
     #w0 = [current_results[0],0, voltage_results[0]]
     #wsol = odeint(cyt.current_ode_sys, w0, time_results)
     #adaptive_current=wsol[:,0]
@@ -141,7 +139,7 @@ for i in range(1, 3):
     cyt.simulation_options["method"]="dcv"
     dcv_volt=cyt.e_nondim(cyt.define_voltages()[cyt.time_idx])
     cyt.simulation_options["method"]="ramped"
-    h_class.plot_harmonics(time_results, experimental_time_series=current_results, simulated_time_series=cmaes_test, hanning=True, plot_func=abs, xaxis=dcv_volt)
+    h_class.plot_harmonics(time_results, experimental_time_series=current_results, simulated_time_series=cmaes_test, hanning=True, plot_func=abs)
     cyt.simulation_options["label"]="cmaes"
     cyt.simulation_options["test"]=False
     cyt.simulation_options["voltage_only"]=False
@@ -168,3 +166,6 @@ for i in range(1, 3):
     plt.plot(time_results, voltage_results, alpha=0.5)
     plt.show()
     h_class.plot_harmonics(time_results, experimental_time_series=current_results, simulated_time_series=cmaes_time, hanning=True, plot_func=abs)
+    plt.plot(cyt.top_hat_filter(cmaes_time))
+    plt.plot(fourier_arg)
+    plt.show()
