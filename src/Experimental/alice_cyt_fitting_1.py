@@ -18,7 +18,7 @@ files=os.listdir(data_loc)
 experimental_dict={}
 param_file=open(data_loc+"/PSV_params", "r")
 useful_params=dict(zip(["max", "min", "Amp[0]", "Freq[0]"], ["E_reverse", "E_start", "d_E", "original_omega"]))
-dec_amount=64
+dec_amount=32
 for line in param_file:
     split_line=line.split()
     if split_line[0] in useful_params.keys():
@@ -92,16 +92,16 @@ for i in range(1, 6):
     param_bounds={
         'E_0':[-0.1, 0.1],
         'omega':[0.95*param_list['omega'],1.05*param_list['omega']],#8.88480830076,  #    (frequency Hz)
-        'Ru': [0, 1e4],  #     (uncompensated resistance ohms)
+        'Ru': [0, 1e2],  #     (uncompensated resistance ohms)
         'Cdl': [0,2e-3], #(capacitance parameters)
         'CdlE1': [-0.1,0.1],#0.000653657774506,
         'CdlE2': [-0.01,0.01],#0.000245772700637,
         'CdlE3': [-0.01,0.01],#1.10053945995e-06,
         'gamma': [0.1*param_list["original_gamma"],100*param_list["original_gamma"]],
-        'k_0': [0, 5e3], #(reaction rate s-1)
+        'k_0': [0, 2e2], #(reaction rate s-1)
         'alpha': [0.4, 0.6],
         "cap_phase":[math.pi/2, 2*math.pi],
-        "E0_mean":[-0.1, 0.1],
+        "E0_mean":[-0.08, 0.04],
         "E0_std": [1e-4,  0.1],
         "E0_skew": [-10, 10],
         "alpha_mean":[0.4, 0.65],
@@ -149,6 +149,8 @@ for i in range(1, 6):
 
     true_data=current_results
     fourier_arg=cyt.top_hat_filter(true_data)
+
+
     cmaes_test=cyt.test_vals(inferred_params, "timeseries")
     #plt.plot(cmaes_test)
     #plt.show()

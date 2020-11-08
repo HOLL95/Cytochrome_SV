@@ -70,7 +70,8 @@ for i in range(1, 3):
         "numerical_debugging": False,
         "experimental_fitting":True,
         "dispersion":False,
-        "dispersion_bins":16,
+        "dispersion_bins":[8],
+        "GH_quadrature":True,
         "test": False,
         "method": "ramped",
         "phase_only":False,
@@ -82,7 +83,7 @@ for i in range(1, 3):
 
     other_values={
         "filter_val": 0.5,
-        "harmonic_range":list(range(4,9,1)),
+        "harmonic_range":list(range(4,11,1)),
         "experiment_time": current_data_file[0::dec_amount, 0],
         "experiment_current": current_data_file[0::dec_amount, 1],
         "experiment_voltage":volt_data,
@@ -130,7 +131,15 @@ for i in range(1, 3):
     inferred_params=[0.0970288663866738, 362.510776540853, 9248.005110326583, 4.9897881784094635e-03, 0.09999999902298948*0, -0.005266814814752714, 2.9148497981974626e-11, param_list["omega"], 0, 0.5987156826440815]
     ramped_inferred=[-0.04485376873500503, 293.2567587982391, 146.0113118472105, 0.0001576519851347672, 0.006105674536299788, 0.0012649370988525588, 2.2215281961212185e-11, 8.959294996508683, 6.147649245979944, 0.5372803774088237]
     inferred_params=[-0.021495031150668878, 17.570527719697008, 1949.3033882011057, 0.0001576519851347672, 0.006105674536299788, 0.0012649370988525588, 2.2215281961212185e-10, 8.959294996508683, 6.147649245979944, 0.5372803774088237]
+    cyt.def_optim_list(["E0_mean", "E0_std","k_0","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","phase", "alpha"])
+    ramped_inferred=[-0.05174906751135161, 0.016887979832412262, 366.94064660027357, 212.25658687481226, 0.0018474547411381252, 0.0343738492662911*0, -0.002837054011354272*0, 8.367546164744082e-11, 8.982298908479827, 1.5595328057012567, 0.46514102280787095]
+    #ramped_inferred=[-0.06158660103168602, 0.02767157845943783, 86.53789947453802, 40.56259593918775, 0.0009310670277647225, 0.030236335577448786, -0.0002525820042452911, 2.2619461371744093e-11, 8.959288930500506, 5.644994973337578, 0.5170561841197072]
+    ramped_inferred_4=[-0.06399623913220037, 0.028829876305729137, 72.32019727498674, 5.1441749230098965, 0.00019999999896173226, -0.02526547219292212, 0.00999999933066467, 2.0738300680573824e-11, 8.959294007054194, 3.8121510094580344, 0.5790715806838499]
+    ramped_inferred_4=[-0.06489530855044306, 0.025901449972125516, 48.1736028007526, 68.30159798782522, 4.714982669828995e-05, 0.04335254198388333, -0.004699728058449013, 2.1898117688472174e-11, 8.959294458587753, 0.9281447797610709, 0.5592126258301378]
+
+    ramped_inferred=[-0.05744624908677006, 0.02788517403038323, 164.40170561479968, 268.7042102662674, 0.00019999999918567714, -0.01781717221653123, -0.0010262335333251996, 2.4414183646021532e-11, 8.959320552342025, 6.283184732454485, 0.40000000000073965]
     cmaes_test=cyt.test_vals(ramped_inferred, "timeseries")
+    cmaes_test_4=cyt.test_vals(ramped_inferred_4, "timeseries")
     #w0 = [current_results[0],0, voltage_results[0]]
     #wsol = odeint(cyt.current_ode_sys, w0, time_results)
     #adaptive_current=wsol[:,0]
@@ -139,7 +148,10 @@ for i in range(1, 3):
     cyt.simulation_options["method"]="dcv"
     dcv_volt=cyt.e_nondim(cyt.define_voltages()[cyt.time_idx])
     cyt.simulation_options["method"]="ramped"
-    h_class.plot_harmonics(time_results, experimental_time_series=current_results, simulated_time_series=cmaes_test, hanning=True, plot_func=abs)
+    h_class.plot_harmonics(time_results, experimental_time_series=current_results, simulated_time_series=cmaes_test, harm_4_time_series=cmaes_test_4, hanning=True, plot_func=abs)
+    plt.plot(cmaes_test)
+    plt.plot(current_results)
+    plt.show()
     cyt.simulation_options["label"]="cmaes"
     cyt.simulation_options["test"]=False
     cyt.simulation_options["voltage_only"]=False
