@@ -36,10 +36,11 @@ class multiplot:
             kwargs["fourier_plot"]=False
         if "fourier_position" not in kwargs and kwargs["fourier_plot"]!=False:
             kwargs["fourier_position"]=[1]
-        if "distribution_position" not in kwargs:
-            kwargs["distribution_position"]=[-1]
         if "distribution_position" in kwargs and kwargs["orientation"]=="portrait":
             raise NotImplementedError("Haven't put portrait mode in yet for the distribution")
+        if "distribution_position" not in kwargs:
+            kwargs["distribution_position"]=[-1]
+
         if "distribution_position" in kwargs and type(kwargs["distribution_position"]) is not list:
             kwargs["distribution_position"]=[kwargs["distribution_position"]]
         if "fourier_position" in kwargs and type(kwargs["fourier_position"]) is not list:
@@ -147,7 +148,7 @@ class multiplot:
                             row_axes.append(ax)
                 else:
                     for j in range(0, num_rows):
-                        loc=(j*(kwargs["num_harmonics"]+kwargs["row_spacing"]),i*(kwargs["plot_width"]+kwargs["col_spacing"])),
+                        loc=(j*(kwargs["num_harmonics"]+kwargs["row_spacing"]),i*(kwargs["plot_width"]+kwargs["col_spacing"]))
                         rowspan=(kwargs["num_harmonics"])
                         colspan=kwargs["plot_width"]
                         subplotspec=gridspecification.new_subplotspec(loc, rowspan, colspan)

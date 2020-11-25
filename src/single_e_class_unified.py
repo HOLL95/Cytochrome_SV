@@ -288,13 +288,13 @@ class single_electron:
             results=np.zeros(len(top_hat), dtype=complex)
             results[freq_idx_1]=likelihood_1
             results[freq_idx_2]=likelihood_2
-        #comp_results=np.real(np.fft.ifft(results))
+        comp_results=np.real(np.fft.ifft(results))
         #plt.plot(self.other_values["experiment_voltage"],comp_results)
 
         #plt.plot(self.secret_data_time_series)
         #plt.show()
         #comp_results=np.append((np.real(results)), np.imag(results))
-        return abs(results)
+        return comp_results
     def abs_transform(self, data):
         window=np.hanning(len(data))
         hanning_transform=np.multiply(window, data)
@@ -407,7 +407,6 @@ class single_electron:
         for i in range(0, len(self.weights)):
             for j in range(0, len(sim_params)):
                 self.nd_param.nd_param_dict[sim_params[j]]=self.values[i][j]
-            print(self.dim_dict["k_0"], self.nd_param.nd_param_dict["k_0"], self.nd_param.nd_param_dict["k_0"]/self.nd_param.c_T0, "kinetic parameters")
             time_series_current=solver(self.nd_param.nd_param_dict, self.time_vec,self.simulation_options["method"], -1, self.bounds_val)
             time_series=np.add(time_series, np.multiply(time_series_current, np.prod(self.weights[i])))
         return time_series
@@ -483,7 +482,6 @@ class single_electron:
             if self.simulation_options["dispersion"]==True:
                 time_series=self.paralell_disperse(solver)
             else:
-                print("cap_phase", self.nd_param.nd_param_dict["cap_phase"])
                 time_series=solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val)
         time_series=np.array(time_series)
         if self.simulation_options["no_transient"]!=False:

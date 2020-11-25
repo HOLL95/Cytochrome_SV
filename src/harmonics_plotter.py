@@ -157,9 +157,8 @@ class harmonics:
 
         for key in kwargs:
             if "time_series" in key:
-                print(key)
                 index=key.find("time_series")
-                if key[index]=="_" or key[index]=="-":
+                if key[index-1]=="_" or key[index-1]=="-":
                     index-=1
                 label_list.append(key[:index])
 

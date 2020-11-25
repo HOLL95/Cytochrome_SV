@@ -16,7 +16,7 @@ dir_list=directory.split("/")
 data_loc=("/").join(dir_list[:-2])+"/Experiment_data/Alice_2_11_20/DCV"
 files=os.listdir(data_loc)
 experimental_dict={}
-file_name="/dcV_Cjx-183D_WT_pH_7_1_1"
+file_name="/dcV_Cjx-183D_WT_pH_7_2_3"
 dcv_file=np.loadtxt(data_loc+file_name, skiprows=2)
 dcv_file_time=dcv_file[:,0]
 dcv_file_voltage=dcv_file[:,1]
@@ -81,7 +81,7 @@ other_values={
 param_bounds={
     'E_0':[-0.1,0.0],
     'omega':[0.95*param_list['omega'],1.05*param_list['omega']],#8.88480830076,  #    (frequency Hz)
-    'Ru': [0, 1e6],  #     (uncompensated resistance ohms)
+    'Ru': [0, 1e5],  #     (uncompensated resistance ohms)
     'Cdl': [0,1e-3], #(capacitance parameters)
     'CdlE1': [-0.1,0.1],#0.000653657774506,
     'CdlE2': [-0.01,0.01],#0.000245772700637,
@@ -91,7 +91,7 @@ param_bounds={
     'CdlE2inv': [-5,5],#0.000245772700637,
     'CdlE3inv': [-5,5],#1.10053945995e-06,
     'gamma': [0.1*param_list["original_gamma"],100*param_list["original_gamma"]],
-    'k_0': [0, 1e4], #(reaction rate s-1)
+    'k_0': [15, 1e4], #(reaction rate s-1)
     'alpha': [0.4, 0.6],
     "cap_phase":[math.pi/2, 2*math.pi],
     "E0_mean":[-0.1,0.1],
@@ -137,7 +137,7 @@ for i in range(0, 2):
     fitted_curve=[func(t, *popt) for t in time_half]
     subtract_current[idx_1[i]:idx_2[i]]=np.subtract(current_half, fitted_curve)
     fitted_curves[idx_1[i]:idx_2[i]]=fitted_curve
-    plt.plot(volt_half, fitted_curve, color="red")
+    #plt.plot(volt_half, fitted_curve, color="red")
     #plt.plot(noise_voltages, noise_current)
 
 cyt.def_optim_list(["E0_mean", "E0_std","k_0","Ru","gamma", "alpha"])
@@ -148,7 +148,7 @@ PSV_params=[-0.06999997557877347, 1.245269093253469, 701.0390205847876, 0.000120
 PSV_params=[-0.06999999976247695, 0.054653156208964916, 0.423123012427712, 361.21853877194775, 0.0005089406894416405, -0.055068050329032774, 0.0022654775318873364, 7.263427801734963e-11, 9.01488754940552, 1.5710075181470322, 5.2472698323265075, 0.4837659989252462]
 ramped_params=[-0.04485376873500503, 293.2567587982391, 146.0113118472105, 0.0001576519851347672, 0.006105674536299788, 0.0012649370988525588, 2.2215281961212185e-11, 8.959294996508683, 6.147649245979944,0, 0.5372803774088237]
 ramped_params=[-0.06158660103168602, 0.02767157845943783, 86.53789947453802, 40.56259593918775, 0.0009310670277647225, 0.030236335577448786, -0.0002525820042452911, 2.2619461371744093e-11, 8.959288930500506, 5.644994973337578, 0.5170561841197072]
-    
+
 DCV_inferred=[-4.98656884e-02,  6.57255463e-01,  1.53468787e-08,  4.00488302e-11,4.16446219e-01]
 DCV_inferred=[-4.97750674e-02,  1.21728678e-02,  6.45936238e-01,  2.44965964e-08,4.08829719e-11 , 4.00000000e-01]
 
@@ -157,8 +157,7 @@ inferred_params=[ramped_params[ramped_optim_list.index(x)] for x in cyt.optim_li
 #inferred_params=DCV_inferred#[-4.97691836e-02,  1.71478268e-02,  3.04770512e+03,  2.63521136e+05, 4.12128630e-11,  4.80069036e-01]
 
 test=cyt.test_vals(inferred_params, "timeseries")
-plt.plot(nondim_v, test)
-plt.plot(nondim_v, np.add(fitted_curves, test))
+#plt.plot(nondim_v, test)
 plt.plot(nondim_v, subtract_current)
 plt.show()
 plt.show()

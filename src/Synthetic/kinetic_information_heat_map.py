@@ -124,7 +124,7 @@ param_list={
     "cap_phase":3*math.pi/2,
     "alpha_mean":0.5,
     "alpha_std":1e-3,
-    'sampling_freq' : (1.0/400),
+    'sampling_freq' : (1.0/2000),
     'phase' :3*math.pi/2,
     "time_end": None,
     'num_peaks': 10,

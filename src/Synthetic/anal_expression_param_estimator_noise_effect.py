@@ -25,10 +25,11 @@ d_E_vals=[3*((R*T)/F), 5*((R*T)/F)]
 desired_harms=list(range(2, 5))
 estimate_array=np.zeros(len(noises))
 estimate_stds=np.zeros(len(noises))
-noise_repeat_array=np.zeros(10)
+num_noise_repeats=50
+noise_repeat_array=np.zeros(num_noise_repeats)
 big_array=[]
 for lcv_0 in range(0, len(noises)):
-    for noise_repeats in range(0, 10):
+    for noise_repeats in range(0, num_noise_repeats):
         for lcv_1 in range(0, num_freqs):
             peak_heights=np.zeros((2, len(desired_harms)))
             E_ins=[0,0]
@@ -58,6 +59,7 @@ for lcv_0 in range(0, len(noises)):
                     'time_end':-1,
                     "num_peaks":300
                 }
+                print(param_list["E_0"], estart, erev)
                 simulation_options={
                     "no_transient":False,
                     "numerical_debugging": False,
@@ -92,17 +94,13 @@ for lcv_0 in range(0, len(noises)):
                 nondim_i=anal.nd_param.c_I0
                 harmonic_range=np.arange(1,10,1)
                 numerical=single_electron(None, param_list, simulation_options, other_values)
-                synthetic_data=numerical.i_nondim(numerical.test_vals([], "timeseries"))
+                #synthetic_data=numerical.i_nondim(numerical.test_vals([], "timeseries"))
                 numerical_time=numerical.t_nondim(numerical.time_vec)
-                """plt.plot(time_range, dim_i)
-                plt.plot(numerical_time, synthetic_data)
-                plt.show()"""
-                interped_anal=np.interp(numerical_time, time_range, dim_i)
+                #interped_anal=np.interp(numerical_time, time_range, dim_i)
                 harms=harmonics(desired_harms, param_list["omega"], 0.1)
                 noisy_i=numerical.add_noise(i_val, noises[lcv_0]*max(i_val))
                 print("NOISES", noises[lcv_0])
                 anal_harms=harms.generate_harmonics(time_range, noisy_i, hanning=True)
-                numerical_harms=harms.generate_harmonics(numerical_time, synthetic_data)
                 for i in range(0, len(desired_harms)):
                     peak_heights[lcv_2, i]=max(abs(anal_harms[i,:]))
             e0_estimates=np.zeros(len(desired_harms))
@@ -114,7 +112,8 @@ for lcv_0 in range(0, len(noises)):
     estimate_stds[lcv_0]=np.std(noise_repeat_array[~np.isnan(noise_repeat_array)])
 big_array.append(estimate_array)
 big_array.append(estimate_stds)
-plt.plot(noises, estimate_array)
+
 np.save("Parameter_inference_changing_noise", big_array)
+plt.plot(noises, estimate_array)
 plt.legend()
 plt.show()

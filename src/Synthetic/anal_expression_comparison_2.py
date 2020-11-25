@@ -14,7 +14,7 @@ k0_vals=[10**x for x in range(-1, 5)]
 
 num_oscillations=[10, 50, 100, 200, 300]
 time_ends=[10.0, 5.0,0.7, 0.07, 0.015, 0.015]
-num_freqs=100
+num_freqs=5
 T=(273+25)
 F=96485.3328959
 R=8.314459848
@@ -23,15 +23,21 @@ def rmse(y, y_pred):
     return np.sqrt(np.mean(np.square(y - y_pred)))
 def approx_error(y, y_true):
     subtractor=abs(np.subtract(y, y_true))
-    addor=abs(np.add(y, y_true))
-    return np.mean(np.divide(subtractor, addor))
+    denom=np.max([np.abs(y), np.abs(y_true)], axis=0)
+    divisor=np.divide(subtractor, denom)
+    divisor[np.where(denom==0)]=0
+    #plt.plot(y)
+    #plt.plot(y_true)
+#    plt.plot(np.subtract(y, y_true))
+    #plt.show()
+    return np.mean(divisor)
 d_E_vals=[3*((R*T)/F), 5*((R*T)/F)]
 desired_harms=list(range(2, 5))
 
 error=np.zeros(num_freqs)
 for lcv_0 in range(0, len(k0_vals)):
     log_k=np.log10(k0_vals[lcv_0])
-    freq_range=[5*(10**x) for x in np.linspace(log_k-3, log_k+4, num_freqs)]
+    freq_range=[5*(10**x) for x in np.linspace(log_k-1, log_k+3, num_freqs)]
     for lcv_1 in range(0, num_freqs):
         peak_heights=np.zeros((2, len(desired_harms)))
         estart=-0.25
@@ -54,7 +60,7 @@ for lcv_0 in range(0, len(k0_vals)):
             'E_0': 0.1,      #       (reversible potential V)
             'k_0': k0_vals[lcv_0], #(reaction rate s-1)
             'alpha': 0.55,
-            'sampling_freq' : (1.0/400),
+            'sampling_freq' : (1.0/2000),
             'phase' : 0,
             'time_end':-1,
             "num_peaks":50
@@ -95,7 +101,10 @@ for lcv_0 in range(0, len(k0_vals)):
         synthetic_data=numerical.i_nondim(numerical.test_vals([], "timeseries"))
         numerical_time=numerical.t_nondim(numerical.time_vec)
         interped_anal=np.interp(numerical_time, time_range, dim_i)
-        error[lcv_1]=(rmse(interped_anal, synthetic_data)/(max([max(interped_anal), max(synthetic_data)])))*100
+        plt.plot(interped_anal)
+        plt.plot(synthetic_data)
+        plt.show()
+        error[lcv_1]=approx_error(interped_anal, synthetic_data)#(rmse(interped_anal, synthetic_data)/rmse(synthetic_data, np.mean(synthetic_data)))*100#(max([max(interped_anal), max(synthetic_data)])))*100
 
         """plt.subplot(1, len(freq_range), lcv_1+1)
         plt.title(error[lcv_1])
@@ -104,11 +113,15 @@ for lcv_0 in range(0, len(k0_vals)):
         plt.legend()
         plt.show()"""
     print(error)
-    plt.semilogx(freq_range, error, label="$k^0=$"+str(k0_vals[lcv_0]))
+    plt.loglog(freq_range, error, label="$k^0=$"+str(k0_vals[lcv_0]))
 plt.legend()
+
 #ax-plt.gca()
 plt.xlabel("Frequency(Hz)")
 #ax.get_xticks()
 
 plt.ylabel("Percentage error")
+fig=plt.gcf()
+fig.set_size_inches((3.25, 4.5))
 plt.show()
+fig.savefig("Bell_error", dpi=500)
