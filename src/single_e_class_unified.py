@@ -288,12 +288,12 @@ class single_electron:
             results=np.zeros(len(top_hat), dtype=complex)
             results[freq_idx_1]=likelihood_1
             results[freq_idx_2]=likelihood_2
-        comp_results=np.real(np.fft.ifft(results))
+        #comp_results=np.real(np.fft.ifft(results))
         #plt.plot(self.other_values["experiment_voltage"],comp_results)
 
         #plt.plot(self.secret_data_time_series)
         #plt.show()
-        #comp_results=np.append((np.real(results)), np.imag(results))
+        comp_results=np.append((np.real(results)), np.imag(results))
         return comp_results
     def abs_transform(self, data):
         window=np.hanning(len(data))
@@ -480,7 +480,10 @@ class single_electron:
         else:
 
             if self.simulation_options["dispersion"]==True:
+                import time
+                start=time.time()
                 time_series=self.paralell_disperse(solver)
+                print(time.time()-start)
             else:
                 time_series=solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val)
         time_series=np.array(time_series)

@@ -29,7 +29,7 @@ def one_tail(series):
     else:
         return series[:len(series)//2+1]
 
-for i in range(1, 6):
+for i in range(1, 2):
     file_name="PSV_Cyt_{0}_cv_".format(i)
     current_data_file=np.loadtxt(data_loc+"/"+file_name+"current")
     voltage_data_file=np.loadtxt(data_loc+"/"+file_name+"voltage")
@@ -71,7 +71,7 @@ for i in range(1, 6):
         "numerical_debugging": False,
         "experimental_fitting":True,
         "dispersion":False,
-        "dispersion_bins":[8],
+        "dispersion_bins":[20],
         "GH_quadrature":True,
         "test": False,
         "method": "sinusoidal",
@@ -84,25 +84,25 @@ for i in range(1, 6):
 
     other_values={
         "filter_val": 0.5,
-        "harmonic_range":list(range(2,100,1)),
+        "harmonic_range":list(range(4,100,1)),
         "experiment_time": current_data_file[0::dec_amount, 0],
         "experiment_current": current_data_file[0::dec_amount, 1],
         "experiment_voltage":volt_data,
-        "bounds_val":20000,
+        "bounds_val":200000,
     }
     param_bounds={
         'E_0':[-0.1, 0.1],
         'omega':[0.95*param_list['omega'],1.05*param_list['omega']],#8.88480830076,  #    (frequency Hz)
-        'Ru': [0, 1e2],  #     (uncompensated resistance ohms)
-        'Cdl': [0,2e-3], #(capacitance parameters)
+        'Ru': [0, 3e2],  #     (uncompensated resistance ohms)
+        'Cdl': [0,5e-4], #(capacitance parameters)
         'CdlE1': [-0.1,0.1],#0.000653657774506,
         'CdlE2': [-0.05,0.05],#0.000245772700637,
         'CdlE3': [-0.05,0.05],#1.10053945995e-06,
-        'gamma': [0.1*param_list["original_gamma"],3*param_list["original_gamma"]],
-        'k_0': [0, 2e2], #(reaction rate s-1)
+        'gamma': [0.1*param_list["original_gamma"],8*param_list["original_gamma"]],
+        'k_0': [50, 1e3], #(reaction rate s-1)
         'alpha': [0.4, 0.6],
         "cap_phase":[math.pi/2, 2*math.pi],
-        "E0_mean":[-0.08, 0.04],
+        "E0_mean":[-0.1, -0.04],
         "E0_std": [1e-4,  0.1],
         "E0_skew": [-10, 10],
         "alpha_mean":[0.4, 0.65],
@@ -168,7 +168,8 @@ for i in range(1, 6):
     plt.plot(fourier_arg)
     plt.plot(cyt.top_hat_filter(cmaes_test))
     plt.show()
-
+    cyt.def_optim_list(["E0_mean", "E0_std","k_0","Ru","Cdl","CdlE1", "CdlE2", "CdlE3","gamma","omega","cap_phase","phase", "alpha"])
+    cyt.dim_dict["alpha"]=0.6
     if simulation_options["likelihood"]=="timeseries":
         cmaes_problem=pints.SingleOutputProblem(cyt, time_results, true_data)
     elif simulation_options["likelihood"]=="fourier":
@@ -186,12 +187,11 @@ for i in range(1, 6):
         print(len(x0), cmaes_problem.n_parameters(), CMAES_boundaries.n_parameters(), score.n_parameters())
         cmaes_fitting=pints.OptimisationController(score, x0, sigma0=None, boundaries=CMAES_boundaries, method=pints.CMAES)
         cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-7)
-        cmaes_fitting.set_parallel(not cyt.simulation_options["test"])
+        cmaes_fitting.set_parallel(True)
         found_parameters, found_value=cmaes_fitting.run()
-        print(found_parameters)
         cmaes_results=cyt.change_norm_group(found_parameters[:], "un_norm")
-        print(list(cmaes_results))
         cmaes_time=cyt.test_vals(cmaes_results, likelihood="fourier", test=False)
+        print(list(cmaes_results))
         #plt.plot(cmaes_time)
         #plt.plot(fourier_arg)
         #plt.show()
