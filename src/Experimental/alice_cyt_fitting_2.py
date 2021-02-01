@@ -135,6 +135,8 @@ for i in range(1,2):
     current_results=cyt.other_values["experiment_current"]
     print(current_results[0], current_results[-1])
     voltage_results=cyt.other_values["experiment_voltage"]
+    plt.plot(voltage_results, current_results)
+    plt.show()
     h_class=harmonics(harms , 1, 0.05)
     #h_class.plot_harmonics(times=time_results, experimental_time_series=current_results, xaxis=voltage_results)
     fft=one_tail(np.fft.fft(current_results))

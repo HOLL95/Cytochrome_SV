@@ -63,7 +63,7 @@ class oscillator:
         return np.mean(np.sqrt(np.square(np.subtract(y, y_data))))
 #fig, axes=plt.subplots(3,4)
 c_counter=0
-for i in range(0, len(frequencies)):
+for i in np.flip(range(0, len(frequencies))):
 
     for j in range(1, 2):
         file_name="Cyt_{0}_hz_{1}_cv_".format(frequencies[i], j)
@@ -139,15 +139,15 @@ for i in range(0, len(frequencies)):
         param_bounds={
             'E_0':[-0.1, 0.1],
             'omega':[0.95*param_list['omega'],1.05*param_list['omega']],#8.88480830076,  #    (frequency Hz)
-            'Ru': [0, 1e2],  #     (uncompensated resistance ohms)
+            'Ru': [0, 1e3],  #     (uncompensated resistance ohms)
             'Cdl': [0,1e-5], #(capacitance parameters)
             'CdlE1': [-0.1,0.1],#0.000653657774506,
             'CdlE2': [-0.1,0.1],#0.000245772700637,
             'CdlE3': [-0.05,0.05],#1.10053945995e-06,
             'gamma': [0.1*param_list["original_gamma"],2*param_list["original_gamma"]],
-            'k_0': [0, 2e2], #(reaction rate s-1)
-            'alpha': [0.4, 0.6],
-            "cap_phase":[math.pi/2, 2*math.pi],
+            'k_0': [50, 1e4], #(reaction rate s-1)
+            'alpha': [0.498, 0.502],
+            "cap_phase":[0.8*3*math.pi/2, 1.2*3*math.pi/3],
             "E0_mean":[-0.1, 0.1],
             "E0_std": [1e-4,  0.1],
             "E0_skew": [-10, 10],
@@ -155,7 +155,7 @@ for i in range(0, len(frequencies)):
             "alpha_std":[1e-3, 0.3],
             "k0_shape":[0,1],
             "k0_scale":[0,1e4],
-            'phase' : [math.pi, 2*math.pi],
+            'phase' : [0.8*3*math.pi/2, 1.2*3*math.pi/3],
         }
         cyt=single_electron(None, param_list, simulation_options, other_values, param_bounds)
         del current_data_file
@@ -169,14 +169,27 @@ for i in range(0, len(frequencies)):
         h_class=harmonics(harms , 1, 0.05)
         h, amps=h_class.generate_harmonics(time_results, cyt.i_nondim(current_results), return_amps=True)
         cycle = plt.rcParams['axes.prop_cycle'].by_key()['color']
-        if i//len(cycle)==1:
-            plt.plot(voltage_results, current_results, label=str(frequencies[i])+"Hz", linestyle="--")
-        else:
-            plt.plot(voltage_results, current_results, label=str(frequencies[i])+"Hz")
-        c_counter+=1
-
-
-plt.legend()
-plt.xlabel("Nondimensional frequency")
-plt.ylabel("(Dimensional magnitude)$^\\frac{1}{3}$")
-plt.show()
+        cyt.def_optim_list(["E0_mean", "E0_std","k_0","Ru","Cdl","CdlE1", "CdlE2", "CdlE3","gamma","omega","cap_phase","phase", "alpha"])
+        cyt.dim_dict["alpha"]=0.5
+        true_data=current_results
+        fourier_arg=cyt.top_hat_filter(true_data)
+        if simulation_options["likelihood"]=="timeseries":
+            cmaes_problem=pints.SingleOutputProblem(cyt, time_results, true_data)
+        elif simulation_options["likelihood"]=="fourier":
+            dummy_times=np.linspace(0, 1, len(fourier_arg))
+            cmaes_problem=pints.SingleOutputProblem(cyt, dummy_times, fourier_arg)
+        cyt.simulation_options["label"]="cmaes"
+        cyt.simulation_options["test"]=False
+        score = pints.SumOfSquaresError(cmaes_problem)
+        CMAES_boundaries=pints.RectangularBoundaries(list(np.zeros(len(cyt.optim_list))), list(np.ones(len(cyt.optim_list))))
+        num_runs=10
+        for i in range(0, num_runs):
+            x0=abs(np.random.rand(cyt.n_parameters()))#cyt.change_norm_group(gc4_3_low_ru, "norm")
+            print(len(x0), cmaes_problem.n_parameters(), CMAES_boundaries.n_parameters(), score.n_parameters())
+            cmaes_fitting=pints.OptimisationController(score, x0, sigma0=None, boundaries=CMAES_boundaries, method=pints.CMAES)
+            cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-7)
+            cmaes_fitting.set_parallel(True)
+            found_parameters, found_value=cmaes_fitting.run()
+            cmaes_results=cyt.change_norm_group(found_parameters[:], "un_norm")
+            cmaes_time=cyt.test_vals(cmaes_results, likelihood="fourier", test=False)
+            print(list(cmaes_results))
