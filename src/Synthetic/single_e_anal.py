@@ -23,11 +23,13 @@ class analytical_electron:
         self.I_0_alpha=I_0_alpha
         self.a_coeff=2*(np.exp(-self.nd_param.alpha*self.nu)/(self.I_0_1_alpha+(np.exp(-self.nu)*self.I_0_alpha)))
     def h(self, t):
-        h=np.exp((1-self.nd_param.alpha)*self.nu)
-        h=h*np.exp((1-self.nd_param.alpha)*self.nd_param.d_E*np.sin(self.nd_param.nd_omega*t+self.nd_param.phase))
+        h=np.exp((1-self.nd_param.alpha)*self.nu)*np.exp((1-self.nd_param.alpha)*self.nd_param.d_E*np.sin(self.nd_param.nd_omega*t+self.nd_param.phase))
         return h
     def e(self, t):
         return self.nd_param.d_E*np.sin(self.nd_param.nd_omega*t+self.nd_param.phase)
+    def update_Ein(self, times):
+        volts=[self.e(t) for t in times]
+        self.nu=np.mean(volts)-self.nd_param.E_0
     def g(self, t):
         g=self.h(t)+np.exp(-self.nd_param.alpha*self.nu)*np.exp((-self.nd_param.alpha)*self.nd_param.d_E*np.sin(self.nd_param.nd_omega*t+self.nd_param.phase))
         return g
@@ -36,6 +38,8 @@ class analytical_electron:
         return i
     def gamma_t(self, t):
         return self.gamma_inf+(self.gamma_0-self.gamma_inf)*np.exp(-self.sigma*t)
+    def diff_eq_gamma(self, gamma, t):
+        return self.h(t)-self.g(t)*gamma
     def p_k(self, m, alpha, Delta, eta):
         if m%2==0:
             p_k=(iv(0,(alpha*Delta))*iv(m,(1-alpha)*Delta))-(iv(0,(1-alpha)*Delta)*iv(m,(alpha)*Delta))

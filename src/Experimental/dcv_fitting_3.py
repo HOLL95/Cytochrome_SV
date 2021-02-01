@@ -10,6 +10,7 @@ from scipy.integrate import odeint
 from single_e_class_unified import single_electron
 from pybamm_solve import pybamm_solver
 from scipy_solver_class import scipy_funcs
+from matplotlib.ticker import FormatStrFormatter
 import time
 directory=os.getcwd()
 dir_list=directory.split("/")

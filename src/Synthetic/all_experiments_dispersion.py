@@ -123,10 +123,10 @@ RV_param_list={
     "CdlE3":0,
     'gamma': 1e-10,
     "original_gamma":1e-10,        # (surface coverage per unit area)
-    'k_0': 1, #(reaction rate s-1)
+    'k_0': 10, #(reaction rate s-1)
     'alpha': 0.5,
-    "k0_scale":1,
-    "k0_shape":0.5,
+    "k0_scale":10,
+    "k0_shape":0.6,
     "E0_mean":-0.25,
     "E0_std": 0.05,
     "E0_skew":0,
@@ -245,7 +245,7 @@ def trumpet_plots(old_class, DCV_scan_rate, sim_params):
         peak_pos[0][q]=DCV_new.e_nondim(volts[np.where(syn_time==max(syn_time))])
         peak_pos[1][q]=DCV_new.e_nondim(volts[np.where(syn_time==min(syn_time))])
     return peak_pos
-for i in range(0, 3):
+for i in range(1, 2):
 
     experiment_type=exp_keys[i]
     current_class=exp_class_dict[experiment_type]

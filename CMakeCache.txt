@@ -15,6 +15,9 @@
 ########################
 
 //Path to a program.
+CMAKE_ADDR2LINE:FILEPATH=/usr/bin/addr2line
+
+//Path to a program.
 CMAKE_AR:FILEPATH=/usr/bin/ar
 
 //Choose the type of build, options are: None Debug Release RelWithDebInfo
@@ -76,6 +79,9 @@ CMAKE_C_FLAGS_RELEASE:STRING=-O2 -DNDEBUG
 //Flags used by the C compiler during RELWITHDEBINFO builds.
 CMAKE_C_FLAGS_RELWITHDEBINFO:STRING=-O2 -g -DNDEBUG
 
+//Path to a program.
+CMAKE_DLLTOOL:FILEPATH=CMAKE_DLLTOOL-NOTFOUND
+
 //Flags used by the linker during all build types.
 CMAKE_EXE_LINKER_FLAGS:STRING=
 
@@ -92,7 +98,7 @@ CMAKE_EXE_LINKER_FLAGS_RELEASE:STRING=
 CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO:STRING=
 
 //Enable/Disable output of compile commands during generation.
-CMAKE_EXPORT_COMPILE_COMMANDS:BOOL=OFF
+CMAKE_EXPORT_COMPILE_COMMANDS:BOOL=
 
 //User executables (bin)
 CMAKE_INSTALL_BINDIR:PATH=bin
@@ -189,8 +195,26 @@ CMAKE_PROJECT_HOMEPAGE_URL:STATIC=
 //Value Computed by CMake
 CMAKE_PROJECT_NAME:STATIC=isolver_martin_brent
 
+//Value Computed by CMake
+CMAKE_PROJECT_VERSION:STATIC=2.6.2
+
+//Value Computed by CMake
+CMAKE_PROJECT_VERSION_MAJOR:STATIC=2
+
+//Value Computed by CMake
+CMAKE_PROJECT_VERSION_MINOR:STATIC=6
+
+//Value Computed by CMake
+CMAKE_PROJECT_VERSION_PATCH:STATIC=2
+
+//Value Computed by CMake
+CMAKE_PROJECT_VERSION_TWEAK:STATIC=
+
 //Path to a program.
 CMAKE_RANLIB:FILEPATH=/usr/bin/ranlib
+
+//Path to a program.
+CMAKE_READELF:FILEPATH=/usr/bin/readelf
 
 //Flags used by the linker during the creation of shared libraries
 // during all build types.
@@ -248,12 +272,14 @@ CMAKE_STRIP:FILEPATH=/usr/bin/strip
 // Studio IDE projects all commands are done without /nologo.
 CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 
-//C++ standard flag, e.g. -std=c++11, -std=c++14, /std:c++14. 
-// Defaults to C++14 mode.
-PYBIND11_CPP_STANDARD:STRING=-std=c++14
+//Force new FindPython
+PYBIND11_FINDPYTHON:BOOL=OFF
 
 //Install pybind11 header files?
 PYBIND11_INSTALL:BOOL=OFF
+
+//Disable search for Python
+PYBIND11_NOPYTHON:BOOL=OFF
 
 //Python version to use for compiling modules
 PYBIND11_PYTHON_VERSION:STRING=
@@ -262,14 +288,10 @@ PYBIND11_PYTHON_VERSION:STRING=
 PYBIND11_TEST:BOOL=OFF
 
 //Path to a program.
-PYTHON_EXECUTABLE:FILEPATH=/usr/bin/python3.7
+PYTHON_EXECUTABLE:FILEPATH=/usr/bin/python3.8
 
 //Path to a library.
-PYTHON_LIBRARY:FILEPATH=/usr/lib64/libpython3.7m.so
-
-//Install pybind11 headers in Python include directory instead
-// of default installation prefix
-USE_PYTHON_INCLUDE_DIR:BOOL=OFF
+PYTHON_LIBRARY:FILEPATH=/usr/lib64/libpython3.8.so
 
 //Value Computed by CMake
 isolver_martin_brent_BINARY_DIR:STATIC=/home/henney/Documents/Oxford/Cytochrome_SV
@@ -278,7 +300,7 @@ isolver_martin_brent_BINARY_DIR:STATIC=/home/henney/Documents/Oxford/Cytochrome_
 isolver_martin_brent_SOURCE_DIR:STATIC=/home/henney/Documents/Oxford/Cytochrome_SV
 
 //Value Computed by CMake
-pybind11_BINARY_DIR:STATIC=/home/henney/Documents/Oxford/Cytochrome_SV/lib/pybind11
+pybind11_BINARY_DIR:STATIC=/home/henney/Documents/Oxford/Cytochrome_SV/pybind11
 
 //Value Computed by CMake
 pybind11_SOURCE_DIR:STATIC=/home/henney/Documents/Oxford/Cytochrome_SV/lib/pybind11
@@ -288,6 +310,8 @@ pybind11_SOURCE_DIR:STATIC=/home/henney/Documents/Oxford/Cytochrome_SV/lib/pybin
 # INTERNAL cache entries
 ########################
 
+//ADVANCED property for variable: CMAKE_ADDR2LINE
+CMAKE_ADDR2LINE-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_AR
 CMAKE_AR-ADVANCED:INTERNAL=1
 //This is the directory where this CMakeCache.txt was created
@@ -295,9 +319,9 @@ CMAKE_CACHEFILE_DIR:INTERNAL=/home/henney/Documents/Oxford/Cytochrome_SV
 //Major version of cmake used to create the current loaded cache
 CMAKE_CACHE_MAJOR_VERSION:INTERNAL=3
 //Minor version of cmake used to create the current loaded cache
-CMAKE_CACHE_MINOR_VERSION:INTERNAL=14
+CMAKE_CACHE_MINOR_VERSION:INTERNAL=17
 //Patch version of cmake used to create the current loaded cache
-CMAKE_CACHE_PATCH_VERSION:INTERNAL=5
+CMAKE_CACHE_PATCH_VERSION:INTERNAL=4
 //ADVANCED property for variable: CMAKE_COLOR_MAKEFILE
 CMAKE_COLOR_MAKEFILE-ADVANCED:INTERNAL=1
 //Path to CMake executable.
@@ -338,6 +362,8 @@ CMAKE_C_FLAGS_MINSIZEREL-ADVANCED:INTERNAL=1
 CMAKE_C_FLAGS_RELEASE-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_C_FLAGS_RELWITHDEBINFO
 CMAKE_C_FLAGS_RELWITHDEBINFO-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: CMAKE_DLLTOOL
+CMAKE_DLLTOOL-ADVANCED:INTERNAL=1
 //Path to cache edit program executable.
 CMAKE_EDIT_COMMAND:INTERNAL=/usr/bin/ccmake
 //Executable file format
@@ -427,6 +453,8 @@ CMAKE_OBJDUMP-ADVANCED:INTERNAL=1
 CMAKE_PLATFORM_INFO_INITIALIZED:INTERNAL=1
 //ADVANCED property for variable: CMAKE_RANLIB
 CMAKE_RANLIB-ADVANCED:INTERNAL=1
+//ADVANCED property for variable: CMAKE_READELF
+CMAKE_READELF-ADVANCED:INTERNAL=1
 //Path to CMake installation.
 CMAKE_ROOT:INTERNAL=/usr/share/cmake
 //ADVANCED property for variable: CMAKE_SHARED_LINKER_FLAGS
@@ -460,29 +488,32 @@ CMAKE_UNAME:INTERNAL=/usr/bin/uname
 //ADVANCED property for variable: CMAKE_VERBOSE_MAKEFILE
 CMAKE_VERBOSE_MAKEFILE-ADVANCED:INTERNAL=1
 //Details about finding PYTHON
-FIND_PACKAGE_MESSAGE_DETAILS_PYTHON:INTERNAL=/usr/bin/python3.7
+FIND_PACKAGE_MESSAGE_DETAILS_PYTHON:INTERNAL=/usr/bin/python3.83.8.6
 //Details about finding PythonInterp
-FIND_PACKAGE_MESSAGE_DETAILS_PythonInterp:INTERNAL=[/usr/bin/python3.7][v3.7.4()]
-//Test HAS_CPP14_FLAG
-HAS_CPP14_FLAG:INTERNAL=1
+FIND_PACKAGE_MESSAGE_DETAILS_PythonInterp:INTERNAL=[/usr/bin/python3.8][v3.8.6()]
 //Test HAS_FLTO
 HAS_FLTO:INTERNAL=1
 PYBIND11_INCLUDE_DIR:INTERNAL=/home/henney/Documents/Oxford/Cytochrome_SV/lib/pybind11/include
-PYBIND11_LTO_CXX_FLAGS:INTERNAL=-flto;-fno-fat-lto-objects
-PYBIND11_LTO_LINKER_FLAGS:INTERNAL=-flto
-PYBIND11_VERSION_MAJOR:INTERNAL=2
-PYBIND11_VERSION_MINOR:INTERNAL=4
-PYBIND11_VERSION_PATCH:INTERNAL=dev4
 //ADVANCED property for variable: PYTHON_EXECUTABLE
 PYTHON_EXECUTABLE-ADVANCED:INTERNAL=1
-PYTHON_INCLUDE_DIRS:INTERNAL=/usr/include/python3.7m
-PYTHON_LIBRARIES:INTERNAL=/usr/lib64/libpython3.7m.so
+PYTHON_INCLUDE_DIRS:INTERNAL=/usr/include/python3.8
+PYTHON_IS_DEBUG:INTERNAL=0
+PYTHON_LIBRARIES:INTERNAL=/usr/lib64/libpython3.8.so
 //ADVANCED property for variable: PYTHON_LIBRARY
 PYTHON_LIBRARY-ADVANCED:INTERNAL=1
-PYTHON_MODULE_EXTENSION:INTERNAL=.cpython-37m-x86_64-linux-gnu.so
+PYTHON_MODULE_EXTENSION:INTERNAL=.cpython-38-x86_64-linux-gnu.so
 PYTHON_MODULE_PREFIX:INTERNAL=
+PYTHON_VERSION:INTERNAL=3.8.6
 PYTHON_VERSION_MAJOR:INTERNAL=3
-PYTHON_VERSION_MINOR:INTERNAL=7
+PYTHON_VERSION_MINOR:INTERNAL=8
+Python_ADDITIONAL_VERSIONS:INTERNAL=3.9;3.8;3.7;3.6;3.5;3.4
 //CMAKE_INSTALL_PREFIX during last run
 _GNUInstallDirs_LAST_CMAKE_INSTALL_PREFIX:INTERNAL=/usr/local
+_Python:INTERNAL=PYTHON
+//True if pybind11 and all required components found on the system
+pybind11_FOUND:INTERNAL=TRUE
+//Directory where pybind11 headers are located
+pybind11_INCLUDE_DIR:INTERNAL=/home/henney/Documents/Oxford/Cytochrome_SV/lib/pybind11/include
+//Directories where pybind11 and possibly Python headers are located
+pybind11_INCLUDE_DIRS:INTERNAL=/home/henney/Documents/Oxford/Cytochrome_SV/lib/pybind11/include;/usr/include/python3.8
 

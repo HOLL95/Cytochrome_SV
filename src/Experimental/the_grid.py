@@ -57,7 +57,8 @@ for key in ramped_dif_params.keys():
     ramped_param_list[key]=ramped_dif_params[key]
     if key in dcv_keys:
         dcv_param_list[key]=dcv_dif_params[key]
-SV_vals=[[-0.007311799334716082, 0.06011218461168426, 100.47324948026552, 49.49286763913283, 0.00011151822964084257, 0.00033546831322842086, 0.009999941792246102,0, 2.999999994953957e-11, 9.015005507706533, 6.283185267250843, 1.9462916200793343, 0.4847309255453626]
+SV_vals=[[-0.007311799334716082, 0.06011218461168426, 100.47324948026552, 49.49286763913283, 0.00011151822964084257, 0.00033546831322842086, 0.009999941792246102,0, 2.999999994953957e-11, 9.015005507706533, 6.283185267250843, 1.9462916200793343, 0.4847309255453626],
+        [-0.07133935323836932, 0.04433940419884379, 217.58306150192792, 135.0495596023161, 9.62463515705647e-06, 0.01730398477905308, 0.04999871276633058, -0.0007206743270165433, 1.37095896576959e-11, 9.01499164308653, 4.7220768639743085, 4.554136092744141, 0.5999999989106146]
 ]
 experiment_dict={
                 "ramped":{"file_loc":"Alice_2_11_20/FTACV", "filename":"FTACV_Cyt_1_cv_","plot_loc":2, "decimation":32, "method":"ramped", "params":ramped_param_list, "transient":1/SV_param_list["omega"], "bounds":20,"harm_range":list(range(3, 8)),
@@ -65,7 +66,7 @@ experiment_dict={
                             "param_list":["E0_mean", "E0_std","k_0","Ru","Cdl","CdlE1", "CdlE2","gamma","omega","phase", "alpha"],
                     },
                 "SV":{"file_loc":"Alice_2_11_20/PSV", "filename":"PSV_Cyt_1_cv_","plot_loc":4, "decimation":32, "method":"sinusoidal", "params":SV_param_list, "transient":1/ramped_param_list["omega"],"bounds":20000,"harm_range":list(range(4, 9)),
-                    "values":SV_vals[0],#[-0.07963988256472493, 0.043023349442016245, 20.550878790990733, 581.5147052074157, 8.806259570340898e-05, -0.045583168350011485, -0.00011159862236990309, 0.00018619134662841048, 2.9947102043021914e-11, 9.014976375142606, 5.699844468024501, 5.18463541959069, 0.5999994350046962],
+                    "values":SV_vals[1],#[-0.07963988256472493, 0.043023349442016245, 20.550878790990733, 581.5147052074157, 8.806259570340898e-05, -0.045583168350011485, -0.00011159862236990309, 0.00018619134662841048, 2.9947102043021914e-11, 9.014976375142606, 5.699844468024501, 5.18463541959069, 0.5999994350046962],
                     "param_list":["E0_mean", "E0_std","k_0","Ru","Cdl","CdlE1", "CdlE2", "CdlE3","gamma","omega","cap_phase","phase", "alpha"],
                     },
                 "DCV_1":{"file_loc":"Alice_2_11_20/DCV", "filename":"dcV_Cjx-183D_WT_pH_7_1_3","plot_loc":1, "method":"dcv", "params":dcv_param_list, "transient":False,"bounds":2000,"harm_range":list(range(4, 9)),
@@ -90,7 +91,7 @@ master_simulation_options={
     "numerical_debugging": False,
     "experimental_fitting":True,
     "dispersion":False,
-    "dispersion_bins":[8],
+    "dispersion_bins":[16],
     "GH_quadrature":True,
     "test": False,
     "method": None,
@@ -107,7 +108,7 @@ master_other_values={
     "experiment_time": None,
     "experiment_current": None,
     "experiment_voltage":None,
-    "bounds_val":20000,
+    "bounds_val":200000,
 }
 master_param_bounds={
     'E_0':[-0.1, 0.1],
@@ -212,7 +213,7 @@ for experiment_type in plot_keys:
                     hanning=False
                     func=empty
                     xlabel="Potential(mV)"
-                harms=harmonics(experiment_dict[experiment_type]["harm_range"], experiment_class.dim_dict["omega"],0.1)
+                harms=harmonics(experiment_dict[experiment_type]["harm_range"], experiment_class.dim_dict["omega"],0.05)
                 exp_harmonics=harms.generate_harmonics(time_results, current_results, hanning=hanning)
                 numerical_harmonics=harms.generate_harmonics(time_results, numerical_current, hanning=hanning)
                 #harms.plot_harmonics(times=time_results, experimental_time_series=current_results, data_time_series=numerical_current, xaxis=voltage_results)
