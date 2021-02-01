@@ -1,0 +1,17 @@
+cvsin_parameters
+type sine
+start -345.000
+end -345.000
+max 255.000
+min -345.000
+rate 22.352
+scans 1
+direction a
+initial_voltage 0.000
+initial_time 0.000
+pre_voltage -345.000
+pre_time 5000.000
+post_voltage 0.000
+post_time 0.000
+freq 8.792
+amp 150.000
