@@ -16,7 +16,6 @@ class scipy_funcs:
     def __init__(self, current_class):
         self.current_class=current_class
         self.nd_param=current_class.nd_param
-        self.adaptively_simulated=False
     def Armstrong_dcv_current(self, times, dcv_voltages):
         T=(273+25)
         F=96485.3328959
@@ -45,25 +44,37 @@ class scipy_funcs:
         ErE0=Er-self.nd_param.nd_param_dict["E_0"]
         alpha=self.nd_param.nd_param_dict["alpha"]
         self.Cdlp=self.nd_param.nd_param_dict["Cdl"]*(1+self.nd_param.nd_param_dict["CdlE1"]*Er+self.nd_param.nd_param_dict["CdlE2"]*(Er**2)+self.nd_param.nd_param_dict["CdlE3"]*(Er**3))
-        d_thetadt=((1-theta)*self.nd_param.nd_param_dict["k_0"]*np.exp((1-alpha)*ErE0))-(theta*self.nd_param.nd_param_dict["k_0"]*np.exp((-alpha)*ErE0))
-        dIdt=(dEdt-(current/self.Cdlp)+self.nd_param.nd_param_dict["gamma"]*d_thetadt*(1/self.Cdlp))/self.nd_param.nd_param_dict["Ru"]
+        if self.current_class.simulation_options["scipy_type"]=="single_electron":
+            d_thetadt=((1-theta)*self.nd_param.nd_param_dict["k_0"]*np.exp((1-alpha)*ErE0))-(theta*self.nd_param.nd_param_dict["k_0"]*np.exp((-alpha)*ErE0))
+            dIdt=(dEdt-(current/self.Cdlp)+self.nd_param.nd_param_dict["gamma"]*d_thetadt*(1/self.Cdlp))/self.nd_param.nd_param_dict["Ru"]
+
+        elif self.current_class.simulation_options["scipy_type"]=="EC":
+            d_thetadt=((1-theta)*self.nd_param.nd_param_dict["k_0"]*np.exp((1-alpha)*ErE0))-(theta*self.nd_param.nd_param_dict["k_0"]*np.exp((-alpha)*ErE0))-(self.nd_param.nd_param_dict["k_1"]*(theta))+(self.nd_param.nd_param_dict["k_2"]*(1-theta))
+            farad_current=((1-theta)*self.nd_param.nd_param_dict["k_0"]*np.exp((1-alpha)*ErE0))-(theta*self.nd_param.nd_param_dict["k_0"]*np.exp((-alpha)*ErE0))
+            dIdt=(dEdt-(current/self.Cdlp)+self.nd_param.nd_param_dict["gamma"]*farad_current*(1/self.Cdlp))/self.nd_param.nd_param_dict["Ru"]
+
+
         f=[dIdt, d_thetadt, dEdt]
         return f
     def simulate_timeseries(self):
+
+
         abserr = 1.0e-8
         relerr = 1.0e-6
         stoptime = self.current_class.time_vec[-1]
         numpoints = len(self.current_class.time_vec)
 
         w0 = [0,0, self.voltage_query(0)[0]]
-        print(w0[2])
         # Call the ODE solver.
 
         wsol = odeint(self.current_ode_sys, w0, self.current_class.time_vec,
                       atol=abserr, rtol=relerr)
-        print(wsol)
-
         return wsol[:,0], wsol[:,1], wsol[:,2]
+    def simulate_current(self,nd_param_dict=None, *args):
+        if nd_param_dict!=None:
+            self.nd_param.nd_param_dict=nd_param_dict
+        current,theta, potential=self.simulate_timeseries()
+        return current
     def simulate_sensitivities(self):
         abserr = 1.0e-8
         relerr = 1.0e-6

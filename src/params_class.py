@@ -2,6 +2,7 @@
 import math
 import warnings
 import copy
+import re
 class params:
     def __init__(self,param_dict):
         self.param_dict=copy.deepcopy(param_dict)
@@ -18,7 +19,7 @@ class params:
 
         self.method_switch={
                             'e_0':self.e0,
-                            'k_0':self.k0,
+
                             'cdl':self.cdl,
                             'e_start' :self.estart,
                             'e_reverse': self.erev,
@@ -29,9 +30,12 @@ class params:
                             'sampling_freq':self.sf
                             }
         keys=sorted(param_dict.keys())
+        p=re.compile("(?=k_[0-9])^((?!_shape).)*$")
         for i in range(0, len(keys)):
             if keys[i].lower() in self.method_switch:
                 self.non_dimensionalise(keys[i], param_dict[keys[i]])
+            elif p.match(keys[i])!=None or keys[i]=="k0_scale":
+                self.generic_k(keys[i], param_dict[keys[i]])
         self.nd_param_dict=self.param_dict
 
 
@@ -44,6 +48,8 @@ class params:
                 function(name_value, 're_dim')
         else:
             raise ValueError(name + " not in param list!")
+    def generic_k(self, key, value):
+        self.param_dict[key]=value*self.c_T0
     def e0(self, value, flag):
         if flag=='re_dim':
             self.param_dict["E_0"]=value*self.c_E0

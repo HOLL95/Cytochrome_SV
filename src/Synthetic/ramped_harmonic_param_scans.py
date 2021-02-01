@@ -50,7 +50,7 @@ except:
     raise ValueError("No voltage file of that scan and frequency found")
 
 regime="irreversible"
-for regime in ["irreversible", "reversible"]:
+for regime in ["reversible", "irreversible"]:
     figure=multiplot(3,2, **{"harmonic_position":list(range(0, 3)), "num_harmonics":num_harms, "orientation":"landscape",  "plot_width":5,"plot_height":3, "row_spacing":1,"col_spacing":1, "plot_height":1})
     for j in range(num_harms, 2*num_harms):
         figure.axes_dict["row3"][j].set_axis_off()
@@ -207,17 +207,17 @@ for regime in ["irreversible", "reversible"]:
 
     cyt=single_electron(None, param_list, simulation_options, other_values, param_bounds)
     print([cyt.dim_dict[x] if x in cyt.dim_dict else 0 for x in table_params])
-    original_params=list(params.keys())
+    original_params=["E_0", "k_0"]
     table_params=["E_0","k0_scale", "k0_shape","Ru","Cdl","CdlE1","gamma","phase", "alpha"]
     print([param_list[x] for x in table_params])
     cyt.def_optim_list(original_params)
     no_disp=cyt.test_vals([0.2, 100], "timeseries")
-    harms=harmonics(cyt.other_values["harmonic_range"], cyt.dim_dict["omega"], 0.5)
+    harms=harmonics(cyt.other_values["harmonic_range"], cyt.dim_dict["omega"], 0.05)
     time_results=cyt.t_nondim(cyt.other_values["experiment_time"])
     current_results=cyt.i_nondim(cyt.other_values["experiment_current"])
     voltage_results=cyt.e_nondim(cyt.other_values["experiment_voltage"])
     no_disp_harmonics=harms.generate_harmonics(time_results, cyt.i_nondim(no_disp))
-    cyt.simulation_options["dispersion_bins"]=[50]
+    cyt.simulation_options["dispersion_bins"]=[25]
     cyt.simulation_options["GH_quadrature"]=False
     def e0_re_dim(arg):
         return np.multiply(arg, cyt.nd_param.c_E0)
@@ -246,8 +246,9 @@ for regime in ["irreversible", "reversible"]:
             for i in range(0, len(params[parameter][disp_param])):
                 sim_params[param_loc]=params[parameter][disp_param][i]
                 syn_time=cyt.test_vals(sim_params, "timeseries")
+                print(i)
                 #print("E0_std", cyt.dim_dict["E0_std"])
-                syn_harmonics=harms.generate_harmonics(time_results, cyt.i_nondim(syn_time*1e6), hanning=True)
+                syn_harmonics=harms.generate_harmonics(time_results, cyt.i_nondim(syn_time*1e6), hanning=False)
                 #plt.subplot(2,2,j)
                 #plt.plot(syn_time, alpha=0.5)
                 func=plot_locs[parameter][disp_param]["func"]
@@ -286,7 +287,7 @@ for regime in ["irreversible", "reversible"]:
                         current_ax.set_xticklabels([])
             disp_xlim=disp_ax.get_xlim()
             print(disp_param, disp_xlim[1]+(abs(disp_xlim[1])*0.5))
-            disp_ax.set_xlim(disp_xlim[0], disp_xlim[1]+(abs(disp_xlim[1]-disp_xlim[0])*0.3))
+            disp_ax.set_xlim(disp_xlim[0], disp_xlim[1]+(abs(disp_xlim[1]-disp_xlim[0])*0.5))
             disp_ax.legend(loc="center right", fontsize=8, frameon=False)
 
 

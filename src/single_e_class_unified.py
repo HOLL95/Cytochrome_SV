@@ -5,9 +5,17 @@ import math
 import numpy as np
 import itertools
 from params_class import params
+from pybamm_solve import pybamm_solver
 from dispersion_class import dispersion
+from filterpy.kalman import KalmanFilter
+from filterpy.common import Q_discrete_white_noise
+from python_NR import NR_test
 from decimal import Decimal
+from python_NR import python_NR_simulation
+from scipy_solver_class import scipy_funcs
+import multiprocessing
 import copy
+import time
 import warnings
 import re
 import matplotlib.pyplot as plt
@@ -152,9 +160,96 @@ class single_electron:
         alpha=self.nd_param.nd_param_dict["alpha"]
         self.Cdlp=self.nd_param.nd_param_dict["Cdl"]*(1+self.nd_param.nd_param_dict["CdlE1"]*Er+self.nd_param.nd_param_dict["CdlE2"]*(Er**2)+self.nd_param.nd_param_dict["CdlE3"]*(Er**3))
         d_thetadt=((1-theta)*self.nd_param.nd_param_dict["k_0"]*np.exp((1-alpha)*ErE0))-(theta*self.nd_param.nd_param_dict["k_0"]*np.exp((-alpha)*ErE0))
-        dIdt=(dEdt-(current/self.Cdlp)+self.nd_param.nd_param_dict["gamma"]*d_thetadt*(1/self.Cdlp))/self.nd_param.nd_param_dict["Ru"]
+        if self.Cdlp<1e-6:
+            dIdt=self.nd_param.nd_param_dict["gamma"]*d_thetadt
+        else:
+            dIdt=(dEdt-(current/self.Cdlp)+self.nd_param.nd_param_dict["gamma"]*d_thetadt*(1/self.Cdlp))/self.nd_param.nd_param_dict["Ru"]
         f=[dIdt, d_thetadt, dEdt]
         return f
+    def diff_cap(self, state_vars, time):
+        current=state_vars
+        if time>self.nd_param.nd_param_dict["tr"]:
+            dE=-1
+        else:
+            dE=1
+        return (dE/self.nd_param.nd_param_dict["Ru"])-(current/(self.nd_param.nd_param_dict["Ru"]*self.nd_param.nd_param_dict["Cdl"]))
+    def likelihood_surfaces(self, parameters, data, **kwargs):
+        if "pc" not in kwargs:
+            kwargs["pc"]=0.1
+        if "size" not in kwargs:
+            kwargs["size"]=20
+        if "scan_parameters" not in kwargs:
+            desired_range=range(0, len(parameters))
+        else:
+            if type(kwargs["scan_parameters"]) is not list:
+                raise TypeError("Parameters needs to be list not "+str(type(kwargs["scan_parameters"])))
+            else:
+                desired_range=[self.optim_list.index(x) for x in kwargs["scan_parameters"]]
+        save_dict={}
+
+        for i in desired_range:
+            save_dict={}
+            print(self.optim_list[i])
+            for j in range(0, len(parameters)):
+                if i==j:
+                    pass
+                if i>j:
+                    start=time.time()
+                    y_param, x_param=self.optim_list[i],self.optim_list[j]
+                    y_idx, x_idx=self.optim_list.index(y_param), self.optim_list.index(x_param)
+                    y_val, x_val=parameters[i], parameters[j]
+                    y_list=np.linspace(y_val*(1-kwargs["pc"]), y_val*(1+kwargs["pc"]), kwargs["size"])
+                    x_list=np.linspace(x_val*(1-kwargs["pc"]), x_val*(1+kwargs["pc"]), kwargs["size"])
+                    XX,YY=np.meshgrid(x_list, y_list)
+                    param_matrix=[[[0 for x in range(0, len(parameters))] for x in range(0, kwargs["size"])] for y in range(0, kwargs["size"])]
+                    for q in range(0, kwargs["size"]):
+                        for k in range(0, kwargs["size"]):
+                            sim_params=copy.deepcopy(parameters)
+                            sim_params[x_idx]=x_list[k]
+                            sim_params[y_idx]=y_list[q]
+                            param_matrix[q][k]=sim_params
+                    param_list=list(itertools.chain(*param_matrix))
+                    mp_argument=zip(param_list, ["fourier"]*(kwargs["size"]**2))
+                    with multiprocessing.Pool(processes=4) as pool:
+                        results = pool.starmap(self.test_vals, mp_argument)
+                    errors=[self.RMSE(x, data) for x in results]
+                    Z=[errors[i:i+kwargs["size"]] for i in range(0, len(errors), kwargs["size"])]
+                    save_dict[x_param+"_"+y_param]={"X":XX, "Y":YY, "Z":Z}
+                    print(x_param+"_"+y_param)
+                    print(XX)
+                    print(YY)
+                    print(Z)
+            np.save("Likelihood_surfaces_"+self.optim_list[i]+".npy", save_dict)
+    def likelihood_curves(self, parameters, data, **kwargs):
+        if "pc" not in kwargs:
+            kwargs["pc"]=0.1
+        if "size" not in kwargs:
+            kwargs["size"]=20
+        if "scan_parameters" not in kwargs:
+            desired_range=range(0, len(parameters))
+        else:
+            if type(kwargs["scan_parameters"]) is not list:
+                raise TypeError("Parameters needs to be list not "+str(type(kwargs["scan_parameters"])))
+            else:
+                desired_range=[self.optim_list.index(x) for x in kwargs["scan_parameters"]]
+        save_dict={}
+        for i in desired_range:
+            x_param=self.optim_list[i]
+            x_idx=self.optim_list.index(x_param)
+            x_val=parameters[i]
+            x_list=np.linspace(x_val*(1-kwargs["pc"]), x_val*(1+kwargs["pc"]), kwargs["size"])
+            param_list=[[0 for x in range(0, len(parameters))] for y in range(0, kwargs["size"])]
+            for q in range(0, kwargs["size"]):
+                sim_params=copy.deepcopy(parameters)
+                sim_params[x_idx]=x_list[q]
+                param_list[q]=sim_params
+
+            mp_argument=zip(param_list, ["fourier"]*kwargs["size"])
+            with multiprocessing.Pool(processes=4) as pool:
+                results = pool.starmap(self.test_vals, mp_argument)
+            errors=[self.RMSE(x, data) for x in results]
+            save_dict[x_param]={"X":x_list, "Y":errors}
+        np.save("Likelihood_curves_high_gamma.npy", save_dict)
     def def_optim_list(self, optim_list):
         keys=list(self.dim_dict.keys())
         for i in range(0, len(optim_list)):
@@ -227,6 +322,8 @@ class single_electron:
         return np.multiply(potential, self.nd_param.c_E0)
     def t_nondim(self, time):
         return np.multiply(time, self.nd_param.c_T0)
+    def RMSE(self, y, y_data):
+        return np.mean(np.sqrt(np.square(np.subtract(y, y_data))))
     def n_outputs(self):
         if self.simulation_options["multi_output"]==True:
             return 2
@@ -293,8 +390,8 @@ class single_electron:
 
         #plt.plot(self.secret_data_time_series)
         #plt.show()
-        comp_results=np.append((np.real(results)), np.imag(results))
-        return comp_results
+        self.comp_results=np.append((np.real(results)), np.imag(results))
+        return self.comp_results
     def abs_transform(self, data):
         window=np.hanning(len(data))
         hanning_transform=np.multiply(window, data)
@@ -320,22 +417,78 @@ class single_electron:
                     "params":params, "optim_list":self.optim_list}
         pickle.dump(save_dict, file, pickle.HIGHEST_PROTOCOL)
         file.close()
-    def calc_theta(self, current):
-        voltages=self.define_voltages()
-        if self.simulation_options["no_transient"]!=True:
-            voltages=voltages[self.time_idx]
-        theta=np.zeros(len(current))
-        theta[0]=0
-        dt=self.nd_param.nd_param_dict["sampling_freq"]
-        for i in range(1, len(current)):
-            Er=voltages[i]-self.nd_param.nd_param_dict["Ru"]*current[i]
-            expval1=Er-self.nd_param.nd_param_dict["E_0"]
-            exp11=np.exp((1-self.nd_param.nd_param_dict["alpha"])*expval1)
-            exp12=np.exp((-self.nd_param.nd_param_dict["alpha"])*expval1)
-            u1n1_top=dt*self.nd_param.nd_param_dict["k_0"]*exp11 + theta[i-1]
-            denom = ((dt*self.nd_param.nd_param_dict["k_0"]*exp11) +(dt*self.nd_param.nd_param_dict["k_0"]*exp12) + 1)
-            theta[i]=u1n1_top/denom
-        return theta
+    def Kalman_capacitance(self, q, error=0.005):
+        #error=0.005*max(self.secret_data_time_series)
+        my_filter = KalmanFilter(dim_x=2, dim_z=1)
+        my_filter.x = np.array([[self.secret_data_time_series[0]],
+                        [1.]])       # initial state (location and velocity)
+        dt=self.time_vec[1]-self.time_vec[0]
+        cdl=self.nd_param.nd_param_dict["Cdl"]
+        ru=self.nd_param.nd_param_dict["Ru"]
+        dt_rc=dt/(ru*cdl)
+        my_filter.F=np.array([[1/(1+dt_rc), (dt/ru)/(1+dt_rc)],[0, 0]])  # state transition matrix
+        tr=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
+        u=np.ones(len(self.time_vec))
+        u[np.where(self.time_vec>tr)]*=-1
+        my_filter.H = np.array([[1.,0.]])    # Measurement function
+        my_filter.P *= error      # covariance matrix
+        my_filter.R = error                      # state uncertainty
+        my_filter.Q = Q_discrete_white_noise(2, dt, q) # process uncertainty
+        my_filter.B=np.array([[0], [1]])
+        means, _, _, _=my_filter.batch_filter(self.secret_data_time_series, Fs=None, Qs=None, Hs=None, Bs=None, us=u)
+        return means[:, 0, 0]
+    def kalman_pure_capacitance(self, current, q):
+        my_filter = KalmanFilter(dim_x=2, dim_z=1)
+        my_filter.x = np.array([[self.nd_param.nd_param_dict["Cdl"]],
+                        [0]])       # initial state (location and velocity)
+        dt=self.time_vec[1]-self.time_vec[0]
+
+        my_filter.F=np.array([[1, dt],[0, 1]])  # state transition matrix
+        tr=self.nd_param.nd_param_dict["E_reverse"]-self.nd_param.nd_param_dict["E_start"]
+        u=np.ones(len(self.time_vec))
+        ru=self.nd_param.nd_param_dict["Ru"]
+        if self.simulation_options["method"]=="dcv":
+            u[np.where(self.time_vec>tr)]*=-1
+            self.kalman_u=u
+            pred_cap=self.kalman_u*current
+        elif self.simulation_options["method"]=="sinusoidal":
+            orignal_phase=self.nd_param.nd_param_dict["phase"]
+            self.nd_param.nd_param_dict["phase"]=self.nd_param.nd_param_dict["cap_phase"]
+            for i in range(0, len(self.time_vec)):
+                u[i]=(self.voltage_query(self.time_vec[i])[1])
+            self.kalman_u=u
+            pred_cap=np.divide((current), u)
+        norm_denom=np.zeros(len(current))
+        norm_denom[0]=u[0]
+
+        """
+        for i in range(1, len(self.secret_data_time_series)):
+            gradient=(self.secret_data_time_series[i]-self.secret_data_time_series[i-1])/dt
+            norm_denom[i]=u[i]-ru*gradient
+            norm=np.divide(1, norm_denom)
+        """
+        #H_array=[np.array([[1, 0]]) for x in range(0, len(norm_denom))]
+        my_filter.H = np.array([[1.,0.]])
+        my_filter.P *= 0.1      # covariance matrix
+        my_filter.R = 1                      # state uncertainty
+        my_filter.Q = Q_discrete_white_noise(2, dt, q) # process uncertainty
+        means=np.zeros(len(self.secret_data_time_series))
+        for i in range(0, len(self.time_vec)):
+            my_filter.predict()
+            my_filter.update(z=pred_cap[i], R=0.1)
+            means[i]=my_filter.x[0][0]
+
+        means=np.divide(means, self.kalman_u)
+        return pred_cap, means
+    def kalman_dcv_simulate(self, Faradaic_current, q):
+
+        candidate_current=np.subtract(self.secret_data_time_series, Faradaic_current)
+        predicted_capcitance, predicted_current=self.kalman_pure_capacitance(candidate_current, q)
+        if self.simulation_options["Kalman_capacitance"]==True:
+            print([(x, self.dim_dict[x]) for x in self.optim_list])
+            self.pred_cap=predicted_current
+            self.farad_current=Faradaic_current
+        return np.add(predicted_current, Faradaic_current)
     def times(self):
         self.time_vec=np.arange(0, self.nd_param.nd_param_dict["time_end"], self.nd_param.nd_param_dict["sampling_freq"])
         #self.time_vec=np.linspace(0, self.nd_param.nd_param_dict["time_end"], num_points)
@@ -403,13 +556,20 @@ class single_electron:
             sim_params, self.values, self.weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict), self.other_values["GH_dict"])
         else:
             sim_params, self.values, self.weights=self.disp_class.generic_dispersion((self.nd_param.nd_param_dict))
-
+        self.disp_test=[]
         for i in range(0, len(self.weights)):
             for j in range(0, len(sim_params)):
                 self.nd_param.nd_param_dict[sim_params[j]]=self.values[i][j]
             time_series_current=solver(self.nd_param.nd_param_dict, self.time_vec,self.simulation_options["method"], -1, self.bounds_val)
+            if self.simulation_options["dispersion_test"]==True:
+                self.disp_test.append(time_series_current)
             time_series=np.add(time_series, np.multiply(time_series_current, np.prod(self.weights[i])))
         return time_series
+    def NR_python(self):
+        self.def_optim_list([])
+        self.test_vals([], "timeseries")
+        class_init=python_NR_simulation(self.time_vec, self.nd_param.nd_param_dict, self.voltage_query)
+        return class_init.numerical_current
     def numerical_plots(self, solver):
         self.debug_time=self.simulation_options["numerical_debugging"]
         time_series=solver(self.nd_param.nd_param_dict, self.time_vec,self.simulation_options["method"], self.debug_time, self.bounds_val)
@@ -464,13 +624,23 @@ class single_electron:
             solver=isolver_martin_NR.NR_current_solver
             if self.simulation_options["method"]=="dcv":
                 raise ValueError("Newton-Raphson dcv simulation not implemented")
+        elif self.simulation_options["numerical_method"]=="Kalman_simulate":
+            if self.simulation_options["method"]=="ramped":
+                raise ValueError("Ramped not implemented for Kalman approach")
+            else:
+                cdl_record=self.nd_param.nd_param_dict["Cdl"]
+                self.nd_param.nd_param_dict["Cdl"]=0
+                solver=isolver_martin_brent.brent_current_solver
+
         elif self.simulation_options["numerical_method"]=="pybamm":
-            print(self.nd_param.nd_param_dict["nd_omega"])
-            try:
-                solver=pybamm_sol.simulate
-            except:
-                pybamm_sol=pybamm_solver(self)
-                solver=pybamm_sol.simulate
+            pybamm_sol=pybamm_solver(self)
+            solver=pybamm_sol.simulate
+        elif self.simulation_options["numerical_method"]=="scipy":
+            if self.simulation_options["scipy_type"]==None:
+                warnings.warn("No defined reaction mechanism, assuming single electron Faradaic")
+                self.simulation_options["scipy_type"]=="single_electron"
+            scipy_class=scipy_funcs(self)
+            solver=scipy_class.simulate_current
         else:
             raise ValueError('Numerical method not defined')
 
@@ -478,14 +648,23 @@ class single_electron:
             current_range, gradient=self.numerical_plots(solver)
             return current_range, gradient
         else:
-
             if self.simulation_options["dispersion"]==True:
                 import time
                 start=time.time()
                 time_series=self.paralell_disperse(solver)
                 print(time.time()-start)
             else:
-                time_series=solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val)
+                if self.simulation_options["numerical_method"]=="pybamm":
+                    try:
+                        time_series=solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val)
+                    except:
+
+                        time_series=np.zeros(len(self.time_vec))#isolver_martin_brent.brent_current_solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val)
+                else:
+                    time_series=solver(self.nd_param.nd_param_dict, self.time_vec, self.simulation_options["method"],-1, self.bounds_val)
+        if self.simulation_options["numerical_method"]=="Kalman_simulate":
+            self.nd_param.nd_param_dict["Cdl"]=cdl_record
+            time_series=self.kalman_dcv_simulate(time_series, self.dim_dict["Q"])
         time_series=np.array(time_series)
         if self.simulation_options["no_transient"]!=False:
             time_series=time_series[self.time_idx]
@@ -507,7 +686,6 @@ class single_electron:
         elif self.simulation_options["likelihood"]=='timeseries':
             if self.simulation_options["test"]==True:
                 print(list(normed_params))
-                self.variable_returner()
                 if self.simulation_options["experimental_fitting"]==True:
                     plt.subplot(1,2,1)
                     plt.plot(self.other_values["experiment_voltage"],time_series)
@@ -545,10 +723,16 @@ class single_electron:
             simulation_options["GH_quadrature"]=False
         if "voltage_only" not in simulation_options:
             simulation_options["voltage_only"]=False
+        if "scipy_type" not in simulation_options:
+            simulation_options["scipy_type"]=None
         if "fourier_scaling" not in simulation_options:
             simulation_options["fourier_scaling"]=None
+        if "Kalman_capacitance" not in simulation_options:
+            simulation_options["Kalman_capacitance"]=False
         if "multi_output" not in simulation_options:
             simulation_options["multi_output"]=False
+        if "dispersion_test" not in simulation_options:
+            simulation_options["dispersion_test"]=False
         return simulation_options
 class paralell_class:
     def __init__(self, params, times, method, bounds, solver):

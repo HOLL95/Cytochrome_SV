@@ -1,5 +1,5 @@
-#include </home/henney/Documents/Oxford/C++_libraries/pybind11/include/pybind11/pybind11.h>
-#include </home/henney/Documents/Oxford/C++_libraries/pybind11/include/pybind11/stl.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 #include <boost/math/tools/minima.hpp>
 #include <boost/math/constants/constants.hpp>
 #include <boost/math/tools/roots.hpp>
@@ -201,11 +201,11 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
     const double sf= get(params,std::string("sampling_freq"),0.1);
     const double dt=  min(t[1]-t[0], sf);
     double Itot0,Itot1;
-    double u1n0;
+    double u1n0, theta_0;
     int input=-1; // 0 for ramped, 1 for sinusoidal, 2 for DCV
     double t1 = 0.0;
     u1n0 = 0.0;
-    const double Cdlp = Cdl*(1.0 + CdlE*E + CdlE2*pow(E,2)+ CdlE3*pow(E,2));
+    double Cdlp = Cdl*(1.0 + CdlE*E + CdlE2*pow(E,2)+ CdlE3*pow(E,2));
     Itot0 =Cdlp*dE;
 
     double tr=E_reverse-E_start;
@@ -232,7 +232,6 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
     else if (input==2){
       E=dcv_et(E_start, E_reverse,tr,v, t1);
       dE=dcv_dEdt(tr,v, t1+0.5*dt);
-      Itot0=0;
 
     }
     //cout<<E<<" "<<dE<<" "<<" "<<Cdl<<" "<<CdlE<<" "<<CdlE2<<" "<<CdlE3<<" "<<E0<<" "<<Ru<<" "<<k0<<" "<<alpha<<" "<<Itot0<<" "<<u1n0<<" "<<dt<<" "<<gamma<<" dicts"<<"\n";
@@ -257,7 +256,6 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
               E=dcv_et(E_start, E_reverse,tr,v, t1);
               dE=dcv_dEdt(tr,v, t1+0.5*dt);
               cap_E=E;
-
             }
             e_surface_fun bc(E,dE,cap_E,Cdl,CdlE,CdlE2,CdlE3,E0,Ru,k0,alpha,Itot0,u1n0,dt,gamma);
             boost::uintmax_t max_it = max_iterations;
@@ -274,10 +272,12 @@ py::object brent_current_solver(py::dict params, std::vector<double> t, std::str
               cout<<-Cdlp*Ru<<" "<<  dt <<" "<< gamma*bc.du1n1<<"\n";
               return py::cast(diagnostic);
             }
+            theta_0=u1n0;
             u1n0 = bc.u1n1;
             t1 += dt;
         }
         Itot[n_out] =(Itot1-Itot0)*(t[n_out]-t1+dt)/dt + Itot0;
+        //Itot[n_out]=u1n0;//(u1n0-theta_0)*(t[n_out]-t1+dt)/dt + theta_0;
     }
     return py::cast(Itot);
 }

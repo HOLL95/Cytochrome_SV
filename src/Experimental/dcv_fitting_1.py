@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import sys
+sys.path.append("..")
 from harmonics_plotter import harmonics
 import os
 import math
@@ -12,7 +13,7 @@ from pybamm_solve import pybamm_solver
 import time
 directory=os.getcwd()
 dir_list=directory.split("/")
-data_loc=("/").join(dir_list[:-1])+"/Experiment_data/DCV/22_Aug/"
+data_loc=("/").join(dir_list[:-2])+"/Experiment_data/DCV/22_Aug/"
 files=os.listdir(data_loc)
 number="2"
 blank_nos=[str(x) for x in range(1, 7)]
@@ -68,7 +69,7 @@ param_list={
     "cap_phase":0,
     "alpha_mean":0.5,
     "alpha_std":1e-3,
-    'sampling_freq' : (1.0/2000),
+    'sampling_freq' : (1.0/400),
     'phase' :0.1,
     "time_end": -1,
     'num_peaks': 30,
@@ -97,7 +98,7 @@ other_values={
     "experiment_time": time_results1,
     "experiment_current": current_results1,
     "experiment_voltage":voltage_results1,
-    "bounds_val":2000,
+    "bounds_val":200000,
 }
 param_bounds={
     'E_0':[-0.3,-0.1],
@@ -129,12 +130,9 @@ cyt=single_electron(None, param_list, simulation_options, other_values, param_bo
 time_results=cyt.other_values["experiment_time"]
 current_results=cyt.other_values["experiment_current"]
 voltage_results=cyt.other_values["experiment_voltage"]
-plt.plot(voltage_results, current_results)
-plt.show()
+
 volts=cyt.define_voltages()
-plt.plot(volts)
-plt.plot(voltage_results)
-plt.show()
+
 cyt.simulation_options["dispersion_bins"]=[16]
 cyt.simulation_options["GH_quadrature"]=True
 cyt.def_optim_list([ "E0_mean", "E0_std", "k_0","Ru","Cdl","CdlE1", "CdlE2", "CdlE3","gamma", "alpha"])
@@ -150,9 +148,13 @@ vals=[-0.22724866541126082, 100, 100000.48267882705497, 0.0003891656168817575, 0
 vals=[-0.1648938033455009, 4809.445600019552, 125414.52863739766, 0.00013568578291782692, -0.09657056694230196, 0.009999988637986899, 5.656008537266864, -4.615626112291761, 3.378462098054783, 1.1195598211208075, 0.0005461800460546118, 8.64481359801844e-10, 0.5954327486818911]
 vals=[-0.22724866541126082,  100, 100000.48267882705497, 0.0003891656168817575, -0.01, 0.0006116081631796888*0, 0.00000015255858946039424*0,9.01037311619498e-10, 0.468582417253183]
 cyt.nd_param.nd_param_dict["time_end"]=time_results[-1]
-cyt.def_optim_list([ "E_0", "k_0","Ru","Cdl","CdlE1", "CdlE2", "CdlE3","gamma", "alpha"])
+cyt.def_optim_list([ "E_0", "k_0","Ru","Cdl","CdlE1", "CdlE2", "gamma", "alpha"])
 vals=[-0.1648938033455009, 4809.445600019552, 125414.52863739766, 0.00013568578291782692, -0.09657056694230196, 0.009999988637986899, 8.64481359801844e-10, 0.5954327486818911]
+vals=[-0.09766669930264582, 0.012925150532744737, 30.89977541151276, 173278.8922312681, 5.910484043174332e-11, 0.4400740478426694]
+vals=[-0.03965379200182533, 5975.837613356413, 101218.8277277494, 5.166281263977765e-10, 0.4899395299153054, 0.0003937395374645653, -0.09987944037464258, -0.004577170831516489, -0.006044437488755836]
+vals=[-0.07519602355630117, 8464.350592578836, 860081.4899800075, 4.6310983839739813e-10, 0.48050894051452564, 4.117742079940732e-06, -0.06455482321296889, 0.003924347750365653, -0.0023102010757593047]
 
+cyt.def_optim_list(["E_0","k_0","Ru","gamma", "alpha", "Cdl", "CdlE1", "CdlE2", "CdlE3"])
 test=cyt.test_vals(vals, "timeseries")
 plt.plot(current_results)
 plt.plot(test)
@@ -162,7 +164,6 @@ plt.show()
 print(len(cyt.time_vec))
 volts=cyt.define_voltages()
 cyt.simulation_options["numerical_method"]="pybamm"
-cyt.def_optim_list(norm_vals)
 k_idx=cyt.optim_list.index("CdlE2")
 orig_k=vals[k_idx]
 k_str=str(round(orig_k, 3))
@@ -203,7 +204,7 @@ for i in range(0, len(rs)):
     stoptime = time_results[-1]
     numpoints = len(current_range)
 
-    w0 = [current_range[0],0, voltage_results[0]]
+    w0 = [current_range[0],1, voltage_results[0]]
 
     # Call the ODE solver.
     start=time.time()

@@ -220,7 +220,7 @@ for regime in ["reversible", "irreversible"]:
     current_results=cyt.i_nondim(cyt.other_values["experiment_current"])
     voltage_results=cyt.e_nondim(cyt.other_values["experiment_voltage"])
     no_disp_harmonics=harms.generate_harmonics(time_results, cyt.i_nondim(no_disp))
-    cyt.simulation_options["dispersion_bins"]=[50]
+    cyt.simulation_options["dispersion_bins"]=[20]
     cyt.simulation_options["GH_quadrature"]=False
     def e0_re_dim(arg):
         return np.multiply(arg, cyt.nd_param.c_E0)
@@ -283,7 +283,7 @@ for regime in ["reversible", "irreversible"]:
                     current_ax.set_xticklabels([])
             disp_xlim=disp_ax.get_xlim()
             disp_ax.xaxis.set_major_locator(plt.MaxNLocator(5))
-            disp_ax.set_xlim(disp_xlim[0], disp_xlim[1]+(abs(disp_xlim[1]-disp_xlim[0])*0.5))
+            disp_ax.set_xlim(disp_xlim[0], disp_xlim[1]+(abs(disp_xlim[1]-disp_xlim[0])*0.3))
             disp_ax.legend(loc="center right", fontsize=8, frameon=False)
 
 

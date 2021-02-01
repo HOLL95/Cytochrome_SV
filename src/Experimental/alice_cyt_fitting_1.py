@@ -1,6 +1,7 @@
 import sys
 sys.path.append("..")
 import numpy as np
+from multiplotter import multiplot
 import matplotlib.pyplot as plt
 import sys
 from harmonics_plotter import harmonics
@@ -17,8 +18,12 @@ data_loc=("/").join(dir_list[:-2])+"/Experiment_data/Alice_2_11_20/PSV"
 files=os.listdir(data_loc)
 experimental_dict={}
 param_file=open(data_loc+"/PSV_params", "r")
+harms=list(range(3,11))
 useful_params=dict(zip(["max", "min", "Amp[0]", "Freq[0]"], ["E_reverse", "E_start", "d_E", "original_omega"]))
-dec_amount=32
+figure=multiplot(1,2, **{"harmonic_position":[1], "num_harmonics":len(harms), "orientation":"portrait",  "plot_width":5,"plot_height":3, "row_spacing":1,"col_spacing":1, "plot_height":1, "harmonic_spacing":1})
+
+#plt.show()
+dec_amount=2
 for line in param_file:
     split_line=line.split()
     if split_line[0] in useful_params.keys():
@@ -60,11 +65,12 @@ for i in range(9, 10):
         "cap_phase":0,
         "alpha_mean":0.5,
         "alpha_std":1e-3,
-        'sampling_freq' : (1.0/400),
+        'sampling_freq' : (1.0/2400),
         'phase' :3*math.pi/2,
         "time_end": -1,
-        'num_peaks': 30,
+        'num_peaks': 100,
     }
+    print(param_list["E_start"], param_list["E_reverse"])
     print(param_list)
     solver_list=["Bisect", "Brent minimisation", "Newton-Raphson", "inverted"]
     likelihood_options=["timeseries", "fourier"]
@@ -133,7 +139,7 @@ for i in range(9, 10):
     cap_param_list=["Cdl", "CdlE1", "CdlE2"]
     #for i in range(0, len(cap_param_list)):
     #    cyt.param_bounds[cap_param_list[i]]=[predicted_cap_params[i]*0.75, predicted_cap_params[i]*1.25]
-    cyt.def_optim_list(["E0_mean", "E0_std","k_0","Ru","Cdl","CdlE1", "CdlE2", "CdlE3","gamma","omega","cap_phase","phase", "alpha"])
+    cyt.def_optim_list(["E0_mean","E0_std","k_0","Ru","Cdl","CdlE1", "CdlE2","CdlE3","gamma","omega","cap_phase","phase", "alpha"])
     inferred_params=[0.09914947692931006, 999.9469476990267, 807.042914431112, 0.0001208124331619577, 0.004110808011450815, 0.0011465660548728757, 1.8241387286724777e-10, 9.015925747638107, 2.344303255727037, 3.3343889148779873, 0.40000026882147105]
     inferred_params=[0.0026892085518520903, 434.4452655954981, 7056.309660109621, 0.00012080446316527372, 0.0024666925378970194, 0.0011465681186305678, 2.595397583499278e-10, 9.01594116289882, 1.600581233850582, 4.7914694562583975, 0.4000025625960726]
     inferred_params=[-0.0831455230466103, 421.75682491012714, 7078.2779711954745, 0.00012080477835014745, 0.004110694113544712, 0.0011465683948502243, 2.596730147883652e-10, 9.015930319756032, 2.1181508092892587, 5.346599955446149, 0.5999999924210264]
@@ -161,10 +167,28 @@ for i in range(9, 10):
 
     true_data=current_results
     fourier_arg=cyt.top_hat_filter(true_data)
+    colours=plt.rcParams['axes.prop_cycle'].by_key()['color']
+
+    single_oscillation_plot(time_results, fourier_arg, colours[0], label="Experiment Data", ax=figure.axes_dict["col1"][0])
 
 
-    cmaes_test=cyt.test_vals(inferred_params, "timeseries")
-    cmaes_test_2=cyt.test_vals(inferred_params_r, "timeseries")
+
+
+    #plt.plot(time_results, fourier_arg)
+    tests=[]
+
+
+    for i in range(0, len(SV_params)):
+        tests.append(cyt.test_vals(SV_params[i], "timeseries"))
+        single_oscillation_plot(time_results, cyt.top_hat_filter(tests[i]), colours[i+1], label="SV set "+str(i+1), alpha=1-((i+1)*0.2),ax=figure.axes_dict["col1"][0])
+    figure.axes_dict["col1"][0].legend()
+    figure.axes_dict["col1"][0].set_xlabel("Nondimensional oscillation period")
+    figure.axes_dict["col1"][0].set_ylabel("Nondimensional current")
+
+    #plt.show()
+    #plt.plot(voltage_results, current_results)
+    #plt.plot(voltage_results, cmaes_test)
+    #plt.show()
     #plt.plot(cmaes_test)
     #plt.show()
     #h_class.plot_harmonics(times=time_results, experimental_time_series=current_results, data_time_series=cmaes_test,  xaxis=voltage_results, alpha_increment=0.3)

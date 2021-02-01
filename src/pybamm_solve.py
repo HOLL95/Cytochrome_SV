@@ -35,7 +35,6 @@ class pybamm_solver:
         Er=E_t-(self.parameter_dict["Ru"]*self.current)
         ErE0=Er-self.parameter_dict["E_0"]
         alpha=self.parameter_dict["alpha"]
-        Cdlp=self.parameter_dict["Cdl"]*(1+self.parameter_dict["CdlE1"]*Er+self.parameter_dict["CdlE2"]*(Er**2)+self.parameter_dict["CdlE3"]*(Er**3))
         if "Cdlinv" not in e_class.optim_list:
             Cdlp=self.parameter_dict["Cdl"]*(1+self.parameter_dict["CdlE1"]*Er+self.parameter_dict["CdlE2"]*(Er**2)+self.parameter_dict["CdlE3"]*(Er**3))
         else:

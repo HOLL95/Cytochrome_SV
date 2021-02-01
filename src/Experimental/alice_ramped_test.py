@@ -30,7 +30,7 @@ def one_tail(series):
     else:
         return series[:len(series)//2+1]
 
-for i in range(1, 3):
+for i in range(3, 4):
     file_name="FTACV_Cyt_{0}_cv_".format(i)
     current_data_file=np.loadtxt(data_loc+"/"+file_name+"current")
     voltage_data_file=np.loadtxt(data_loc+"/"+file_name+"voltage")
@@ -87,7 +87,7 @@ for i in range(1, 3):
         "experiment_time": current_data_file[0::dec_amount, 0],
         "experiment_current": current_data_file[0::dec_amount, 1],
         "experiment_voltage":volt_data,
-        "bounds_val":200,
+        "bounds_val":2000,
     }
     param_bounds={
         'E_0':[-0.1, 0.0],
@@ -166,7 +166,7 @@ for i in range(1, 3):
         dummy_times=np.linspace(0, 1, len(fourier_arg))
         cmaes_problem=pints.SingleOutputProblem(cyt, dummy_times, fourier_arg)
     score = pints.SumOfSquaresError(cmaes_problem)
-    CMAES_boundaries=pints.RectangularBoundaries(list(np.zeros(len(cyt.optim_list))), list(np.ones(len(cyt.optim_list))))
+    """CMAES_boundaries=pints.RectangularBoundaries(list(np.zeros(len(cyt.optim_list))), list(np.ones(len(cyt.optim_list))))
     x0=abs(np.random.rand(cyt.n_parameters()))#cyt.change_norm_group(gc4_3_low_ru, "norm")
     cmaes_fitting=pints.OptimisationController(score, x0, sigma0=None, boundaries=CMAES_boundaries, method=pints.CMAES)
     cmaes_fitting.set_max_unchanged_iterations(iterations=200, threshold=1e-7)
@@ -183,4 +183,4 @@ for i in range(1, 3):
     h_class.plot_harmonics(time_results, experimental_time_series=current_results, simulated_time_series=cmaes_time, hanning=True, plot_func=abs)
     plt.plot(cyt.top_hat_filter(cmaes_time))
     plt.plot(fourier_arg)
-    plt.show()
+    plt.show()"""

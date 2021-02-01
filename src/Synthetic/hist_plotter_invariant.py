@@ -13,7 +13,7 @@ files=["Sens_MCMC_high_f","ED_MCMC"]
 d_E_errors=[2.1973630798514976, 0.5772175913790867]
 just_f_errors=[0.19127081488301423,0.14939889969993458]
 sd_ratios=np.zeros(len(params))
-labels=["FIM parameters", "$\it{de}$ $\it{novo}$ parameters"]
+labels=["$\it{de}$ $\it{novo}$ parameters", "FIM parameters"]
 for z in range(0, len(files)):
     chains=np.load("MCMC_results/"+ files[z])
     for i in range(0, len(chains[0,0,:])):
@@ -34,7 +34,7 @@ for z in range(0, len(files)):
         else:
             sd_ratios[i]=sd_ratios[i]/np.std(chain)
         if "\\alpha" in params[i]:
-            ax.legend(loc="bottom", bbox_to_anchor=[1.85, -0.2], ncol=2, frameon=False)
+            ax.legend(loc="lower center", bbox_to_anchor=[0.5, -0.4], ncol=2, frameon=False)
         plt.ylabel("Frequency")
         if i<len(chains[0,0,:])-1:
             plt.axvline(true_vals[i], color="black", linestyle="--")
@@ -46,11 +46,11 @@ for z in range(0, len(files)):
                 fontsize=12)
             #ax.set_title(round(sd_ratios[i],2))
 plt.subplots_adjust(top=0.99,
-                    bottom=0.16,
+                    bottom=0.13,
                     left=0.11,
                     right=0.99,
                     hspace=0.285,
                     wspace=0.46)
 fig=plt.gcf()
-#plt.show()
+plt.show()
 fig.savefig("SD_ratios.png", dpi=500)

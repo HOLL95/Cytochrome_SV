@@ -14,7 +14,7 @@ k0_vals=[10**x for x in range(-1, 5)]
 
 num_oscillations=[10, 50, 100, 200, 300]
 time_ends=[10.0, 5.0,0.7, 0.07, 0.015, 0.015]
-num_freqs=5
+num_freqs=40
 T=(273+25)
 F=96485.3328959
 R=8.314459848
@@ -37,7 +37,8 @@ desired_harms=list(range(2, 5))
 error=np.zeros(num_freqs)
 for lcv_0 in range(0, len(k0_vals)):
     log_k=np.log10(k0_vals[lcv_0])
-    freq_range=[5*(10**x) for x in np.linspace(log_k-1, log_k+3, num_freqs)]
+    freq_range=[5/math.pi*(10**x) for x in np.linspace(log_k, log_k+5, num_freqs)]
+    nd_freqs=np.zeros(len(freq_range))
     for lcv_1 in range(0, num_freqs):
         peak_heights=np.zeros((2, len(desired_harms)))
         estart=-0.25
@@ -55,15 +56,15 @@ for lcv_0 in range(0, len(k0_vals)):
             'CdlE1': 0,#0.000653657774506,
             'CdlE2': 0,#0.000245772700637,
             'CdlE3': 0,#1.10053945995e-06,
-            'gamma': 9.5e-12,
-            'original_gamma':9.5e-12,      # (surface coverage per unit area)
+            'gamma': 1e-11,
+            'original_gamma':1e-11,      # (surface coverage per unit area)
             'E_0': 0.1,      #       (reversible potential V)
             'k_0': k0_vals[lcv_0], #(reaction rate s-1)
             'alpha': 0.55,
-            'sampling_freq' : (1.0/2000),
+            'sampling_freq' : (1.0/200),
             'phase' : 0,
             'time_end':-1,
-            "num_peaks":50
+            "num_peaks":30
         }
         simulation_options={
             "no_transient":False,
@@ -82,11 +83,12 @@ for lcv_0 in range(0, len(k0_vals)):
         other_values={
             "filter_val": 0.5,
             "harmonic_range":list(range(3, 8)),
-            "bounds_val":20000,
+            "bounds_val":40000,
         }
         anal=analytical_electron(param_list, 0.0)
         time_range=np.linspace(0,param_list["num_peaks"]/param_list["omega"], int(param_list["num_peaks"]*(1/param_list["sampling_freq"])))
         non_dim_time_range=time_range/anal.nd_param.c_T0
+        anal.update_Ein(non_dim_time_range)
         time_len=len(time_range)
         i_val=np.zeros(time_len)
         e_val=np.zeros(time_len)
@@ -101,19 +103,18 @@ for lcv_0 in range(0, len(k0_vals)):
         synthetic_data=numerical.i_nondim(numerical.test_vals([], "timeseries"))
         numerical_time=numerical.t_nondim(numerical.time_vec)
         interped_anal=np.interp(numerical_time, time_range, dim_i)
-        plt.plot(interped_anal)
-        plt.plot(synthetic_data)
-        plt.show()
-        error[lcv_1]=approx_error(interped_anal, synthetic_data)#(rmse(interped_anal, synthetic_data)/rmse(synthetic_data, np.mean(synthetic_data)))*100#(max([max(interped_anal), max(synthetic_data)])))*100
 
+        error[lcv_1]=100*rmse(synthetic_data, interped_anal)/np.mean(abs(synthetic_data))#(max([max(interped_anal), max(synthetic_data)])))*100
+        nd_freqs[lcv_1]=anal.nd_param.nd_omega
+        #print(anal.nd_param.nd_omega)
         """plt.subplot(1, len(freq_range), lcv_1+1)
         plt.title(error[lcv_1])
         plt.plot(numerical_time, interped_anal, label=param_list["k_0"])
         plt.plot(numerical_time, synthetic_data)
         plt.legend()
         plt.show()"""
-    print(error)
-    plt.loglog(freq_range, error, label="$k^0=$"+str(k0_vals[lcv_0]))
+    #print(error)
+    plt.loglog(freq_range, error, label="${\k}^0=$"+str(k0_vals[lcv_0]))
 plt.legend()
 
 #ax-plt.gca()

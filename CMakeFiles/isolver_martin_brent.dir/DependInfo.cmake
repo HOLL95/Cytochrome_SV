@@ -17,8 +17,8 @@ set(CMAKE_TARGET_DEFINITIONS_CXX
 set(CMAKE_CXX_TARGET_INCLUDE_PATH
   "src"
   "lib/boost"
+  "/usr/include/python3.8"
   "lib/pybind11/include"
-  "/usr/include/python3.7m"
   )
 
 # Targets to which this target links.

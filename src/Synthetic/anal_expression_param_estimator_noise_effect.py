@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 freq_range=[5*(10**x) for x in np.arange(1,2)]
 freq_range=[50]
 noises=np.linspace(-3, -1, 20)
-noises=[0]+[10**x for x in noises]
+noises=[x/100 for x in [0.5, 1, 2, 3, 4, 5]]
 
 num_oscillations=[10, 50, 100, 200, 300]
 time_ends=[10.0, 5.0,0.7, 0.07, 0.015, 0.015]
@@ -25,10 +25,11 @@ d_E_vals=[3*((R*T)/F), 5*((R*T)/F)]
 desired_harms=list(range(2, 5))
 estimate_array=np.zeros(len(noises))
 estimate_stds=np.zeros(len(noises))
-num_noise_repeats=50
+num_noise_repeats=1000
 noise_repeat_array=np.zeros(num_noise_repeats)
 big_array=[]
 for lcv_0 in range(0, len(noises)):
+    noise_repeat_array=np.zeros(num_noise_repeats)
     for noise_repeats in range(0, num_noise_repeats):
         for lcv_1 in range(0, num_freqs):
             peak_heights=np.zeros((2, len(desired_harms)))
@@ -59,7 +60,6 @@ for lcv_0 in range(0, len(noises)):
                     'time_end':-1,
                     "num_peaks":300
                 }
-                print(param_list["E_0"], estart, erev)
                 simulation_options={
                     "no_transient":False,
                     "numerical_debugging": False,
@@ -99,7 +99,7 @@ for lcv_0 in range(0, len(noises)):
                 #interped_anal=np.interp(numerical_time, time_range, dim_i)
                 harms=harmonics(desired_harms, param_list["omega"], 0.1)
                 noisy_i=numerical.add_noise(i_val, noises[lcv_0]*max(i_val))
-                print("NOISES", noises[lcv_0])
+                print("NOISES", noise_repeats)
                 anal_harms=harms.generate_harmonics(time_range, noisy_i, hanning=True)
                 for i in range(0, len(desired_harms)):
                     peak_heights[lcv_2, i]=max(abs(anal_harms[i,:]))
@@ -108,12 +108,8 @@ for lcv_0 in range(0, len(noises)):
                 e0_estimates[i]=anal.nd_param_estimator(desired_harms[i], peak_heights[0,i], peak_heights[1, i], E_in_1=0, Delta1=3, eta1=-1, alpha=0.55, E_in_2=0, Delta2=5, eta2=-1)
 
         noise_repeat_array[noise_repeats]=np.mean(e0_estimates[~np.isnan(e0_estimates)])
-    estimate_array[lcv_0]=np.mean(noise_repeat_array[~np.isnan(noise_repeat_array)])
-    estimate_stds[lcv_0]=np.std(noise_repeat_array[~np.isnan(noise_repeat_array)])
-big_array.append(estimate_array)
-big_array.append(estimate_stds)
-
+        print(np.mean(e0_estimates[~np.isnan(e0_estimates)]))
+    print(noise_repeat_array)
+    big_array.append({str(noises[lcv_0]):noise_repeat_array})
+print(big_array)
 np.save("Parameter_inference_changing_noise", big_array)
-plt.plot(noises, estimate_array)
-plt.legend()
-plt.show()
