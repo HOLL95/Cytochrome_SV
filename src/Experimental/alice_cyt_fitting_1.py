@@ -29,7 +29,10 @@ def one_tail(series):
     else:
         return series[:len(series)//2+1]
 
-for i in range(1, 2):
+for i in range(9, 10):
+    print("#"*50)
+    print(i)
+    print("#"*50)
     file_name="PSV_Cyt_{0}_cv_".format(i)
     current_data_file=np.loadtxt(data_loc+"/"+file_name+"current")
     voltage_data_file=np.loadtxt(data_loc+"/"+file_name+"voltage")
@@ -71,7 +74,7 @@ for i in range(1, 2):
         "numerical_debugging": False,
         "experimental_fitting":True,
         "dispersion":False,
-        "dispersion_bins":[20],
+        "dispersion_bins":[10],
         "GH_quadrature":True,
         "test": False,
         "method": "sinusoidal",
@@ -88,20 +91,20 @@ for i in range(1, 2):
         "experiment_time": current_data_file[0::dec_amount, 0],
         "experiment_current": current_data_file[0::dec_amount, 1],
         "experiment_voltage":volt_data,
-        "bounds_val":200000,
+        "bounds_val":20000,
     }
     param_bounds={
         'E_0':[-0.1, 0.1],
         'omega':[0.95*param_list['omega'],1.05*param_list['omega']],#8.88480830076,  #    (frequency Hz)
         'Ru': [0, 3e2],  #     (uncompensated resistance ohms)
-        'Cdl': [0,5e-4], #(capacitance parameters)
+        'Cdl': [0,2e-5], #(capacitance parameters)
         'CdlE1': [-0.1,0.1],#0.000653657774506,
-        'CdlE2': [-0.05,0.05],#0.000245772700637,
+        'CdlE2': [-0.1,0.1],#0.000245772700637,
         'CdlE3': [-0.05,0.05],#1.10053945995e-06,
-        'gamma': [0.1*param_list["original_gamma"],8*param_list["original_gamma"]],
-        'k_0': [50, 1e3], #(reaction rate s-1)
-        'alpha': [0.4, 0.6],
-        "cap_phase":[math.pi/2, 2*math.pi],
+        'gamma': [0.1*param_list["original_gamma"],2*param_list["original_gamma"]],
+        'k_0': [50, 7e3], #(reaction rate s-1)
+        'alpha': [0.498, 0.502],
+        "cap_phase":[0.8*3*math.pi/2, 1.2*3*math.pi/2],
         "E0_mean":[-0.1, -0.04],
         "E0_std": [1e-4,  0.1],
         "E0_skew": [-10, 10],
@@ -109,7 +112,7 @@ for i in range(1, 2):
         "alpha_std":[1e-3, 0.3],
         "k0_shape":[0,1],
         "k0_scale":[0,1e4],
-        'phase' : [math.pi, 2*math.pi],
+        'phase' : [0.8*3*math.pi/2, 1.2*3*math.pi/2],
     }
     cyt=single_electron(None, param_list, simulation_options, other_values, param_bounds)
     del current_data_file
@@ -119,8 +122,8 @@ for i in range(1, 2):
     current_results=cyt.other_values["experiment_current"]
     print(current_results[0], current_results[-1])
     voltage_results=cyt.other_values["experiment_voltage"]
-    plt.plot(voltage_results, current_results)
-    plt.show()
+    #plt.plot(voltage_results, current_results)
+    #plt.show()
     h_class=harmonics(list(range(2, 12)), 1, 0.05)
     #h_class.plot_harmonics(times=time_results, experimental_time_series=current_results, xaxis=voltage_results)
     fft=one_tail(np.fft.fft(current_results))
@@ -147,7 +150,8 @@ for i in range(1, 2):
     #inferred_params=[-0.0799999406845655, 0.0006326853185018757, 11.404688167955095, 435.38946410332125, 0.0003974967599057362, -0.015891933775066952, 0.002876007903003845, 9.451463608587014e-05, 9.882939615377444e-11, 9.014828719621992, 6.103657756767619, 5.841842013135137, 0.5895189414915667]
     #inferred_params=[-0.07632986533754478, 0.040390731896883234, 192.51086887319363, 288.54187086006345, 0.0013658249756693496, -0.07084976727014575, 0.0029492437701449867, 0.0008362333991225532, 9.554918268923766e-11, 9.015123523221748, 1.9545454241711602, 3.9946735979450043, 0.5999999971031313]
 
-    inferred_params=[-0.07963988256472493, 0.043023349442016245, 20.550878790990733, 581.5147052074157, 8.806259570340898e-05, -0.045583168350011485, -0.00011159862236990309, 0.00018619134662841048, 2.9947102043021914e-11, 9.014976375142606, 5.699844468024501, 5.18463541959069, 0.5999994350046962]
+    inferred_params=[-0.05686943085003152, 0.09999580533579214, 998.5353595956417, 224.2495876801631, 7.385771733498396e-08, -0.01216726934033871, 0.037549660109213345, -0.002706561696431728, 3.340673009174627e-11, 9.072534870882093, 4.1103112950054905, 6.2831853064824745, 0.4892283638339926]
+
     #inferred_params=[-0.06489530855044306, 0.025901449972125516, 48.1736028007526, 68.30159798782522, 4.714982669828995e-05, 0.04335254198388333*0, -0.004699728058449013*0,0, 2.1898117688472174e-11,9.014976375142606,3*math.pi/2,3*math.pi/2, 0.5592126258301378]
 
 
@@ -163,25 +167,25 @@ for i in range(1, 2):
     cmaes_test_2=cyt.test_vals(inferred_params_r, "timeseries")
     #plt.plot(cmaes_test)
     #plt.show()
-    h_class.plot_harmonics(times=time_results, experimental_time_series=current_results, data_time_series=cmaes_test, r_data_time_series=cmaes_test_2,  xaxis=voltage_results, alpha_increment=0.3)
+    #h_class.plot_harmonics(times=time_results, experimental_time_series=current_results, data_time_series=cmaes_test,  xaxis=voltage_results, alpha_increment=0.3)
 
-    plt.plot(fourier_arg)
-    plt.plot(cyt.top_hat_filter(cmaes_test))
-    plt.show()
+    #plt.plot(fourier_arg)
+    #plt.plot(cyt.top_hat_filter(cmaes_test))
+    #plt.show()
     cyt.def_optim_list(["E0_mean", "E0_std","k_0","Ru","Cdl","CdlE1", "CdlE2", "CdlE3","gamma","omega","cap_phase","phase", "alpha"])
-    cyt.dim_dict["alpha"]=0.6
+    cyt.dim_dict["alpha"]=0.5
     if simulation_options["likelihood"]=="timeseries":
         cmaes_problem=pints.SingleOutputProblem(cyt, time_results, true_data)
     elif simulation_options["likelihood"]=="fourier":
         dummy_times=np.linspace(0, 1, len(fourier_arg))
         cmaes_problem=pints.SingleOutputProblem(cyt, dummy_times, fourier_arg)
-        plt.plot(fourier_arg)
-        plt.show()
+        #plt.plot(fourier_arg)
+        #plt.show()
     cyt.simulation_options["label"]="cmaes"
     cyt.simulation_options["test"]=False
     score = pints.SumOfSquaresError(cmaes_problem)
     CMAES_boundaries=pints.RectangularBoundaries(list(np.zeros(len(cyt.optim_list))), list(np.ones(len(cyt.optim_list))))
-    num_runs=10
+    num_runs=20
     for i in range(0, num_runs):
         x0=abs(np.random.rand(cyt.n_parameters()))#cyt.change_norm_group(gc4_3_low_ru, "norm")
         print(len(x0), cmaes_problem.n_parameters(), CMAES_boundaries.n_parameters(), score.n_parameters())

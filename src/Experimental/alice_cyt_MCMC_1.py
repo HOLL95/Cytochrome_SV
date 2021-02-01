@@ -94,7 +94,7 @@ for i in range(1, 2):
         'E_0':[-0.1, 0.1],
         'omega':[0.95*param_list['omega'],1.05*param_list['omega']],#8.88480830076,  #    (frequency Hz)
         'Ru': [0, 3e3],  #     (uncompensated resistance ohms)
-        'Cdl': [0,8e-4], #(capacitance parameters)
+        'Cdl': [0,5e-3], #(capacitance parameters)
         'CdlE1': [-0.1,0.1],#0.000653657774506,
         'CdlE2': [-0.05,0.05],#0.000245772700637,
         'CdlE3': [-0.05,0.05],#1.10053945995e-06,
@@ -165,7 +165,7 @@ for i in range(1, 2):
     log_liklihood=pints.GaussianLogLikelihood(MCMC_problem)
     log_prior=pints.UniformLogPrior(updated_b[0], updated_b[1])
     log_posterior=pints.LogPosterior(log_liklihood, log_prior)
-    mcmc_parameters=inferred_params4[:-1]
+    mcmc_parameters=inferred_params4
 
     mcmc_parameters=np.append(mcmc_parameters, error)
     xs=[mcmc_parameters,
